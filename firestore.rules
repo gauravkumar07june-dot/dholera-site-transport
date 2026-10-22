@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function known(col) { return col in ['trips', 'vehicles', 'config']; }
+
+    // Only the three collections the site uses; everything else is closed.
+    match /{col}/{id} {
+      allow read: if signedIn() && known(col);
+      allow create, update: if signedIn() && known(col)
+        && request.resource.data.size() <= 40;
+      allow delete: if signedIn() && known(col);
+    }
+  }
+}

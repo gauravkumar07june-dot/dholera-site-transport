@@ -1,0 +1,1010 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B6B66">
+<title>Dholera Site Transport</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* Layout: sticky site header + role tabs; each role is one working view. Dispatch opens on a route strip showing where every vehicle stands. */
+:root{
+  --bg:#EDF0EE; --surface:#FFFFFF; --surface-2:#F5F7F6; --ink:#16201D; --ink-2:#55625C; --line:#D3DBD7;
+  --accent:#0B6B66; --accent-ink:#FFFFFF; --accent-soft:#D6EBE8;
+  --signal:#C2410C; --signal-soft:#FCE5D8;
+  --ok:#157A3C; --ok-soft:#DBF1E2; --warn:#A35C07; --warn-soft:#FBEACB; --bad:#B42318; --bad-soft:#FBE0DD; --idle:#5E6B78; --idle-soft:#E4E9ED;
+  --plate-bg:#FFFFFF; --plate-ink:#111111; --plate-edge:#1B1B1B; --plate-band:#1D4FBF; --plate-band-ink:#FFFFFF;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#151D1A; --surface-2:#1B2521; --ink:#E4EBE8; --ink-2:#9AA9A2; --line:#2A3631;
+  --accent:#43B8AE; --accent-ink:#062220; --accent-soft:#163A37;
+  --signal:#FB8B50; --signal-soft:#3B2216;
+  --ok:#5BD98B; --ok-soft:#14311F; --warn:#F5B94A; --warn-soft:#352812; --bad:#F7867B; --bad-soft:#3A1916; --idle:#A3B0BD; --idle-soft:#242C34;
+  --plate-bg:#ECEFEE; --plate-ink:#111111; --plate-edge:#000000; --plate-band:#2B5BC7; --plate-band-ink:#FFFFFF;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#151D1A; --surface-2:#1B2521; --ink:#E4EBE8; --ink-2:#9AA9A2; --line:#2A3631;
+  --accent:#43B8AE; --accent-ink:#062220; --accent-soft:#163A37;
+  --signal:#FB8B50; --signal-soft:#3B2216;
+  --ok:#5BD98B; --ok-soft:#14311F; --warn:#F5B94A; --warn-soft:#352812; --bad:#F7867B; --bad-soft:#3A1916; --idle:#A3B0BD; --idle-soft:#242C34;
+  --plate-bg:#ECEFEE; --plate-ink:#111111; --plate-edge:#000000; --plate-band:#2B5BC7; --plate-band-ink:#FFFFFF;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:.01em;margin:0;text-wrap:balance}
+h2{font-size:20px;line-height:1.15}
+h3{font-size:17px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num,.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-2)}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:10px 0}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1 1 220px}
+.brand h1{font-size:26px;line-height:1;text-transform:uppercase;letter-spacing:.03em}
+.brand h1 i{font-style:normal;color:var(--accent)}
+.brand small{color:var(--ink-2);font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-top:3px}
+.status-row{display:flex;align-items:center;gap:10px}
+.clock{font-family:var(--font-mono);font-size:15px;font-weight:600}
+.mode{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--idle-soft);color:var(--idle);white-space:nowrap}
+.mode.live{background:var(--ok-soft);color:var(--ok)}
+.mode.demo{background:var(--warn-soft);color:var(--warn)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;width:100%;margin-top:8px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:none;padding:10px 14px 11px;font-family:var(--font-display);font-size:17px;font-weight:600;letter-spacing:.02em;color:var(--ink-2);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .count{font-family:var(--font-mono);font-size:11px;background:var(--signal);color:var(--surface);border-radius:999px;padding:1px 6px;font-weight:600}
+.tab .count:empty{display:none}
+
+main.wrap{padding-block:18px 48px;display:flex;flex-direction:column;gap:16px}
+.banner{padding:10px 14px;border-radius:var(--r);background:var(--warn-soft);color:var(--ink);border:1px solid var(--line);font-size:13px}
+.banner b{color:var(--warn)}
+
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.panel-h p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;align-items:start}
+.cols-book{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.cols-book{grid-template-columns:1fr}}
+.empty{padding:18px;border:1px dashed var(--line);border-radius:var(--r);color:var(--ink-2);font-size:13px;text-align:center}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r);padding:7px 12px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn.danger.armed{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.btn.big{padding:14px 16px;font-size:16px;width:100%;display:flex;flex-direction:column;align-items:center;gap:1px}
+.btn.big small{font-weight:500;font-size:13px;opacity:.85}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* forms */
+form{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field>span{font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+.field textarea{resize:vertical;min-height:58px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg label{display:flex;flex-direction:column;gap:2px;padding:10px 12px;cursor:pointer;border-right:1px solid var(--line);background:var(--surface-2);min-width:0}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg b{font-family:var(--font-display);font-size:17px;font-weight:600}
+.seg small{font-size:12px;color:var(--ink-2)}
+.seg label:has(input:checked){background:var(--accent-soft);box-shadow:inset 0 -3px 0 var(--accent)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+@media (max-width:520px){.seg{grid-template-columns:1fr}.seg label{border-right:0;border-bottom:1px solid var(--line)}.seg label:last-child{border-bottom:0}}
+.inline-radios{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.inline-radios label{display:flex;gap:6px;align-items:center;font-weight:500}
+.form-err{color:var(--bad);font-size:13px;min-height:1em}
+
+/* pills & plates */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;background:var(--idle-soft);color:var(--idle)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.pill.sig{background:var(--signal-soft);color:var(--signal)}
+.tag{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid var(--line);color:var(--ink-2)}
+.tag.meeting{border-color:var(--signal);color:var(--signal)}
+.tag.outstation{border-color:var(--accent);color:var(--accent)}
+.plate{display:inline-flex;align-items:stretch;font-family:var(--font-mono);font-weight:600;font-size:12px;border:1.5px solid var(--plate-edge);border-radius:4px;background:var(--plate-bg);color:var(--plate-ink);overflow:hidden;white-space:nowrap;line-height:1.5}
+.plate b{background:var(--plate-band);color:var(--plate-band-ink);font-size:7.5px;padding:0 3px;display:flex;align-items:center;letter-spacing:.04em;font-family:var(--font-body)}
+.plate span{padding:1px 6px}
+
+/* trip rows */
+.list{display:flex;flex-direction:column;gap:8px}
+.trip{border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--surface);min-width:0}
+.trip.urgent{border-color:var(--signal);background:linear-gradient(var(--signal-soft),var(--signal-soft)) top/100% 3px no-repeat,var(--surface)}
+.trip-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.who{font-weight:600}
+.who small{font-weight:400;color:var(--ink-2)}
+.route-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--font-display);font-size:18px;font-weight:600}
+.route-line .arr{color:var(--ink-2);font-family:var(--font-body);font-size:14px}
+.meta{display:flex;gap:8px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);align-items:center}
+.note{font-size:13px;color:var(--ink-2);font-style:italic}
+.pick{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface-2);border-radius:var(--r)}
+.pick button{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:3px;font-size:12px}
+.pick button:hover{border-color:var(--accent)}
+.pick .hint{width:100%;font-size:12px;color:var(--ink-2)}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi span{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.kpi b{font-family:var(--font-display);font-size:32px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi small{font-size:12px;color:var(--ink-2)}
+.kpi.alert b{color:var(--signal)}
+
+/* route strip */
+.route-wrap{overflow-x:auto;padding-bottom:4px}
+.route{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(132px,1fr);position:relative;min-width:max-content}
+.route::before{content:"";position:absolute;left:24px;right:24px;top:15px;height:4px;background:var(--accent);border-radius:2px;opacity:.35}
+.stn{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:0 10px;position:relative}
+.stn .dot{width:20px;height:20px;border-radius:50%;background:var(--surface);border:4px solid var(--accent);margin-top:7px;z-index:1}
+.stn.has .dot{background:var(--accent)}
+.stn h3{font-size:15px;line-height:1.1}
+.stn .vs{display:flex;flex-direction:column;gap:4px}
+.stn .none{font-size:12px;color:var(--ink-2)}
+.side-groups{display:flex;gap:18px;flex-wrap:wrap;padding-top:6px;border-top:1px solid var(--line)}
+.side-groups>div{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.side-groups .lbl{font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+
+/* driver */
+.drv-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.drv-head .plate{font-size:18px}
+.drv-head .plate b{font-size:9px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.job{border:2px solid var(--accent);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
+.job .big-route{font-family:var(--font-display);font-size:26px;font-weight:600;line-height:1.1}
+.job .big-route small{display:block;font-family:var(--font-body);font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);background:var(--surface-2);font-weight:600;position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.tbl-wrap.tall{max-height:460px;overflow:auto}
+.bar-cell{display:flex;align-items:center;gap:8px}
+.bar-cell i{display:block;height:8px;border-radius:2px;background:var(--accent);min-width:2px}
+
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--ink-2);font-family:var(--font-mono);font-size:11px}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .bar{fill:var(--accent)}
+.chart .bar.now{fill:var(--signal)}
+
+.settings-list{display:flex;flex-wrap:wrap;gap:6px}
+.settings-list span{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:var(--surface-2)}
+.settings-list button{appearance:none;border:0;background:none;cursor:pointer;color:var(--ink-2);font-size:15px;line-height:1;padding:0 4px}
+.settings-list button:hover{color:var(--bad)}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+code{font-family:var(--font-mono);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:3px;border:1px solid var(--line)}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);font-size:13.5px;font-weight:500;max-width:calc(100% - 32px);z-index:20;box-shadow:0 6px 24px rgb(0 0 0 / .2)}
+.loading{padding:40px 0;text-align:center;color:var(--ink-2)}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .18s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Dholera <i>Site</i> Transport</h1>
+      <small>TSMPL FAB project · staff vehicles</small>
+    </div>
+    <div class="status-row">
+      <span class="mode" id="mode">Connecting…</span>
+      <span class="clock" id="clock">--:--</span>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" data-tab="book" aria-selected="true">Book a ride</button>
+      <button class="tab" role="tab" data-tab="dispatch">Dispatch <span class="count" id="cnt-dispatch"></span></button>
+      <button class="tab" role="tab" data-tab="driver">Driver</button>
+      <button class="tab" role="tab" data-tab="records">Records</button>
+      <button class="tab" role="tab" data-tab="fleet">Fleet &amp; setup</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- BOOK -->
+  <section id="v-book" class="cols-book">
+    <div class="panel">
+      <div class="panel-h"><div><h2>Request a vehicle</h2><p>The dispatcher sees your request instantly. No phone call needed.</p></div></div>
+      <form id="book-form" novalidate>
+        <div class="seg" role="radiogroup" aria-label="Trip type">
+          <label><input type="radio" name="kind" value="site" checked><b>Within site</b><small>Between buildings, gate, office</small></label>
+          <label><input type="radio" name="kind" value="meeting"><b>Meeting</b><small>Priority pickup at a set time</small></label>
+          <label><input type="radio" name="kind" value="outstation"><b>Going home</b><small>Airport, station · needs approval</small></label>
+        </div>
+        <div class="grid2">
+          <label class="field"><span>From</span><select id="b-from" required></select></label>
+          <label class="field"><span>To</span><select id="b-to" required></select></label>
+        </div>
+        <label class="field" id="b-other-wrap" hidden><span>Destination name</span><input id="b-other" placeholder="e.g. Bhavnagar bus stand"></label>
+        <div class="field" id="b-when-site">
+          <span>When</span>
+          <div class="inline-radios">
+            <label><input type="radio" name="whenmode" value="now" checked> Now</label>
+            <label><input type="radio" name="whenmode" value="later"> Later</label>
+          </div>
+        </div>
+        <label class="field" id="b-when-wrap" hidden><span id="b-when-label">Pickup time</span><input type="datetime-local" id="b-when"></label>
+        <div class="grid2">
+          <label class="field"><span>Your name</span><input id="b-name" autocomplete="name" placeholder="Full name"></label>
+          <label class="field"><span>Employee no.</span><input id="b-emp" placeholder="PS no."></label>
+          <label class="field"><span>Department</span><select id="b-dept"></select></label>
+          <label class="field"><span>Mobile</span><input id="b-phone" inputmode="tel" placeholder="So the driver can call"></label>
+          <label class="field"><span>Passengers</span><input id="b-pax" type="number" min="1" max="12" value="1"></label>
+        </div>
+        <label class="field"><span id="b-note-label">Note for driver</span><textarea id="b-note" placeholder="Optional"></textarea></label>
+        <div class="form-err" id="b-err" role="alert"></div>
+        <button class="btn primary big" type="submit" data-write><span id="b-submit">Request vehicle</span><small>गाड़ी बुक करें</small></button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Your rides</h2><p>Live status of requests made from this device.</p></div></div>
+      <div id="my-rides" class="list"></div>
+    </div>
+  </section>
+
+  <!-- DISPATCH -->
+  <section id="v-dispatch" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div class="kpis" id="d-kpis"></div>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Where the vehicles are</h2><p>Free vehicles parked at each pickup point.</p></div></div>
+      <div class="route-wrap" id="d-route"></div>
+      <div class="side-groups" id="d-side"></div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <div class="panel-h"><div><h2>Waiting for a vehicle</h2><p>Meetings first, then oldest request.</p></div><button class="btn primary" data-act="autoall" data-write>Auto-assign all</button></div>
+        <div id="d-queue" class="list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><div><h2>On the move</h2><p>Mark pickups here if a driver has no phone.</p></div></div>
+        <div id="d-moving" class="list"></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <div class="panel-h"><div><h2>Going home · approvals</h2><p>Airport and station trips need a manager's OK.</p></div></div>
+        <div id="d-pools"></div>
+        <div id="d-approval" class="list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><div><h2>Scheduled later</h2><p>Approved and pre-booked trips more than 30 min away.</p></div></div>
+        <div id="d-later" class="list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DRIVER -->
+  <section id="v-driver" hidden>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Driver screen</h2><p>Pick your vehicle once. This phone remembers it.</p></div>
+        <label class="field" style="min-width:220px"><span>Your vehicle · आपकी गाड़ी</span><select id="drv-veh"></select></label>
+      </div>
+      <div id="drv-body" style="display:flex;flex-direction:column;gap:14px"></div>
+    </div>
+  </section>
+
+  <!-- RECORDS -->
+  <section id="v-records" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div class="panel-h">
+      <div class="chips" id="r-range">
+        <button class="chip" data-range="today" aria-pressed="true">Today</button>
+        <button class="chip" data-range="7d" aria-pressed="false">Last 7 days</button>
+        <button class="chip" data-range="30d" aria-pressed="false">Last 30 days</button>
+        <button class="chip" data-range="all" aria-pressed="false">All</button>
+      </div>
+      <button class="btn" data-act="export">Export trip log (CSV)</button>
+    </div>
+    <div class="kpis" id="r-kpis"></div>
+    <div class="panel chart">
+      <div class="panel-h"><div><h2>Requests by hour</h2><p>When staff ask for vehicles. Use it to set shuttle frequency.</p></div></div>
+      <div id="r-hours"></div>
+    </div>
+    <div class="cols">
+      <div class="panel"><h2>Busiest routes</h2><div id="r-routes"></div></div>
+      <div class="panel"><h2>By department</h2><div id="r-dept"></div></div>
+    </div>
+    <div class="panel"><h2>Vehicle use</h2><div id="r-veh"></div></div>
+    <div class="panel">
+      <div class="panel-h"><h2>Trip log</h2>
+        <input id="r-q" placeholder="Search name, emp no., place, vehicle" style="padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);min-width:0;width:min(100%,320px)">
+      </div>
+      <div id="r-log"></div>
+    </div>
+  </section>
+
+  <!-- FLEET -->
+  <section id="v-fleet" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div class="panel">
+      <div class="panel-h"><div><h2>Vehicles</h2><p>Every vehicle on the employee service.</p></div><div class="btn-row"><button class="btn" data-act="loadsample" data-write id="btn-load-sample" hidden>Load sample data</button><button class="btn danger" data-act="clearsample" data-write id="btn-clear-sample" hidden>Remove sample data</button></div></div>
+      <div id="f-veh"></div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <h2>Add a vehicle</h2>
+        <form id="veh-form" novalidate>
+          <div class="grid2">
+            <label class="field"><span>Number plate</span><input id="v-plate" placeholder="GJ 01 AB 1234"></label>
+            <label class="field"><span>Type</span><select id="v-type"><option>Dzire</option><option>Innova Crysta</option><option>Ertiga</option><option>Bolero</option><option>Tempo Traveller</option><option>Bus</option><option>Other</option></select></label>
+            <label class="field"><span>Seats</span><input id="v-seats" type="number" min="1" max="60" value="4"></label>
+            <label class="field"><span>Parked at</span><select id="v-at"></select></label>
+            <label class="field"><span>Driver name</span><input id="v-driver"></label>
+            <label class="field"><span>Driver mobile</span><input id="v-dphone" inputmode="tel"></label>
+          </div>
+          <div class="form-err" id="v-err" role="alert"></div>
+          <button class="btn primary" type="submit" data-write>Add vehicle</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Pickup points</h2>
+        <div class="settings-list" id="f-stops"></div>
+        <div class="add-row"><input id="f-stop-new" placeholder="New pickup point, e.g. WWT Building"><button class="btn" data-act="addstop" data-write>Add</button></div>
+        <h2 style="margin-top:6px">Outstation destinations</h2>
+        <div class="settings-list" id="f-outs"></div>
+        <div class="add-row"><input id="f-out-new" placeholder="e.g. Dhandhuka bus stand"><button class="btn" data-act="addout" data-write>Add</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Direct links for QR codes</h2>
+      <p class="muted" style="margin:0">Add one of these to the end of this page's link and print it as a QR code. A poster at FAB gate with <code>#from-fab-building</code> opens the booking form with FAB already filled in. Bookmark <code>#dispatch</code> on the dispatcher's phone and <code>#driver</code> on drivers' phones.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Poster at</th><th>Add to link</th></tr></thead><tbody id="f-links"></tbody></table></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+/*SAMPLE*/
+function sampleData(now){
+  const M=60000;
+  const V=[
+    ["GJ 01 KT 4417","Innova Crysta",6,"Ramesh Parmar","FAB Building","available"],
+    ["GJ 01 RM 2286","Dzire",4,"Sanjay Vaghela","Project Office","available"],
+    ["GJ 18 BX 9031","Ertiga",6,"Imran Shaikh","Gate No. 1","available"],
+    ["GJ 01 HV 5520","Tempo Traveller",12,"Bharat Solanki","CUP Building","available"],
+    ["GJ 27 TD 7704","Dzire",4,"Mahesh Rathod","Plot 4","available"],
+    ["GJ 01 WP 3398","Innova Crysta",6,"Kiran Desai","Guest House 1","available"],
+    ["GJ 18 AZ 1162","Bolero",6,"Vikram Chauhan","Project Office","break"],
+    ["GJ 01 NN 8845","Dzire",4,"Rakesh Patel","Gate No. 1","available"]];
+  const vehicles=V.map(([plate,type,seats,driver,at,status])=>({id:plate.replace(/[^A-Za-z0-9]/g,'').toUpperCase(),plate,type,seats,driver,driverPhone:'',at,status,sample:true}));
+  const vid=i=>vehicles[i].id;
+  const P=[["Neha Joshi","MEP"],["Arjun Rao","Civil"],["Priya Nair","Planning"],["Vivek Sharma","QA/QC"],["Sameer Khan","HSE"],["Anil Kumar","Procurement"],["Deepa Iyer","Management"],["Rohit Verma","MEP"],["Kunal Shah","Client / PMC"],["Meera Pillai","Admin & HR"]];
+  const trips=[]; let n=0;
+  const add=(p,from,to,kind,extra)=>{n++;trips.push(Object.assign({id:'sample-'+String(n).padStart(2,'0'),passenger:P[p][0],empNo:'S'+(40100+p*37),dept:P[p][1],phone:'',pax:1,from,to,kind,when:null,note:'',status:'waiting',vehicleId:null,createdAt:now,createdBy:null,sample:true},extra));};
+  const done=(p,from,to,ago,wait,ride,v,kind,pax)=>{kind=kind||'site';const c=now-ago*M;add(p,from,to,kind,{pax:pax||1,status:'done',vehicleId:vid(v),createdAt:c,when:kind==='meeting'?c+wait*M:null,assignedAt:c+Math.min(wait,3)*M,pickedAt:c+wait*M,doneAt:c+(wait+ride)*M});};
+  done(0,"Project Office","FAB Building",420,6,8,1);
+  done(1,"Gate No. 1","CUP Building",395,11,7,2);
+  done(2,"Guest House 1","Project Office",380,4,15,5,'site',3);
+  done(3,"FAB Building","Plot 4",330,14,9,0);
+  done(4,"CUP Building","Gate No. 1",290,8,6,3);
+  done(5,"Project Office","CUP Building",250,5,9,1);
+  done(6,"FAB Building","Project Office",215,2,8,0,'meeting');
+  done(7,"Plot 4","FAB Building",180,17,10,4);
+  done(8,"Gate No. 1","Project Office",150,7,5,7);
+  done(9,"Project Office","Guest House 2",120,9,14,5);
+  done(0,"FAB Building","CUP Building",95,3,6,0);
+  done(3,"CUP Building","Project Office",70,12,9,3);
+  const c1=now-18*M; add(1,"FAB Building","Project Office","site",{status:'picked',vehicleId:vid(0),createdAt:c1,assignedAt:c1+2*M,pickedAt:c1+9*M});
+  const c2=now-6*M; add(4,"Gate No. 1","CUP Building","site",{status:'assigned',vehicleId:vid(2),createdAt:c2,assignedAt:c2+M});
+  add(5,"Plot 4","Project Office","site",{pax:2,createdAt:now-9*M});
+  add(9,"CUP Building","FAB Building","site",{createdAt:now-4*M});
+  add(6,"CUP Building","Project Office","meeting",{when:now+25*M,note:"Weekly MEP review with client",createdAt:now-12*M});
+  const tm=new Date(now); tm.setDate(tm.getDate()+1); tm.setHours(6,30,0,0); const t0=tm.getTime();
+  add(7,"Guest House 1","Ahmedabad Airport","outstation",{status:'approval',when:t0,note:"Morning flight, home leave",createdAt:now-50*M});
+  add(8,"Guest House 2","Ahmedabad Airport","outstation",{status:'approval',when:t0+45*M,pax:2,note:"Flight at 10:30",createdAt:now-35*M});
+  add(2,"Guest House 1","Ahmedabad Railway Station","outstation",{status:'waiting',approvedAt:now-20*M,when:t0+8*60*M,note:"Train home",createdAt:now-80*M});
+  add(5,"Project Office","Plot 4","site",{status:'cancelled',createdAt:now-200*M,cancelledAt:now-196*M});
+  return {vehicles,trips};
+}
+/*ENDSAMPLE*/
+
+(function(){
+"use strict";
+const MIN=60000, DAY=864e5;
+const DEPTS=["MEP","Civil","Planning","QA/QC","HSE","Procurement","Admin & HR","Client / PMC","Management","Other"];
+const DEFAULT_CFG={stops:["Project Office","Gate No. 1","FAB Building","CUP Building","Plot 4","Guest House 1","Guest House 2"],outstation:["Ahmedabad Airport","Ahmedabad Railway Station"]};
+const STATUS={approval:['Awaiting approval','sig'],rejected:['Not approved','bad'],waiting:['Waiting for vehicle','warn'],assigned:['Vehicle on the way','acc'],picked:['On board','acc'],done:['Completed','ok'],cancelled:['Cancelled','']};
+const KIND={site:'Within site',meeting:'Meeting',outstation:'Going home'};
+const VSTATE={free:['Free','ok'],busy:['On trip','warn'],break:['On break','idle'],off:['Off duty','']};
+const TABS=['book','dispatch','driver','records','fleet'];
+
+const S={trips:new Map(),vehicles:new Map(),cfg:clone(DEFAULT_CFG),mode:'loading',canWrite:true,myId:null,tab:'book',
+  openAssign:null,confirm:null,range:'today',logQ:'',loaded:{trips:false,vehicles:false}};
+let db=null; const memMine=[];
+
+function clone(o){return JSON.parse(JSON.stringify(o))}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const LS={get(k,d){try{const v=localStorage.getItem('dst:'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('dst:'+k,JSON.stringify(v))}catch(e){}}};
+const fmtT=ms=>new Date(ms).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
+const fmtD=ms=>new Date(ms).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+function fmtDT(ms){const d=new Date(ms),n=new Date();if(d.toDateString()===n.toDateString())return 'Today '+fmtT(ms);if(new Date(n.getTime()+DAY).toDateString()===d.toDateString())return 'Tomorrow '+fmtT(ms);return fmtD(ms)+' '+fmtT(ms);}
+const mins=ms=>Math.max(0,Math.round(ms/MIN));
+const dur=m=>m<60?m+' min':Math.floor(m/60)+' h '+(m%60?m%60+' min':'');
+function dayStart(){const d=new Date();d.setHours(0,0,0,0);return d.getTime();}
+const plate=v=>v?`<span class="plate"><b>IND</b><span>${esc(v.plate)}</span></span>`:'';
+const pill=(txt,cls)=>`<span class="pill ${cls||''}">${esc(txt)}</span>`;
+const sampleTag=o=>o&&o.sample?' <span class="tag">Sample</span>':'';
+const allTrips=()=>[...S.trips.values()];
+const tripsBy=st=>allTrips().filter(t=>t.status===st);
+
+/* ---------- toast & errors ---------- */
+let toastTimer;
+function toast(msg){const el=$('#toast');el.textContent=msg;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true},3200);}
+async function act(p){
+  try{return await p;}
+  catch(e){
+    const code=e&&e.code;
+    if(code==='permission-denied'){toast("The database refused this change. Check the Firestore rules in the README.");}
+    else if(code==='resource-exhausted'){toast("Today's free database limit is used up. It resets tomorrow, or upgrade the Firebase plan.");}
+    else toast("Couldn't save just now. Check the connection and try again.");
+    throw e;
+  }
+}
+
+/* ---------- store ---------- */
+const queues={};
+function serial(key,fn){const p=(queues[key]||Promise.resolve()).catch(()=>{}).then(fn);queues[key]=p;return p;}
+const store={
+  async addTrip(d){
+    if(db){const ref=db.collection('trips').doc();await serial('t/'+ref.id,()=>ref.set(d));return ref.id;}
+    const id='local-'+Math.random().toString(36).slice(2,9);S.trips.set(id,Object.assign({},d,{id}));renderAll();return id;
+  },
+  async updTrip(id,p){
+    if(db)return serial('t/'+id,()=>db.doc('trips/'+id).update(p));
+    const t=S.trips.get(id);if(t){S.trips.set(id,Object.assign({},t,p));renderAll();}
+  },
+  async delTrip(id){if(db)return serial('t/'+id,()=>db.doc('trips/'+id).delete());S.trips.delete(id);renderAll();},
+  async setVeh(id,d){
+    const body=Object.assign({},d);delete body.id;
+    if(db)return serial('v/'+id,()=>db.doc('vehicles/'+id).set(body));
+    S.vehicles.set(id,Object.assign({},body,{id}));renderAll();
+  },
+  async updVeh(id,p){
+    if(db)return serial('v/'+id,()=>db.doc('vehicles/'+id).update(p));
+    const v=S.vehicles.get(id);if(v){S.vehicles.set(id,Object.assign({},v,p));renderAll();}
+  },
+  async delVeh(id){if(db)return serial('v/'+id,()=>db.doc('vehicles/'+id).delete());S.vehicles.delete(id);renderAll();},
+  async loadSample(){
+    const d=sampleData(Date.now());const b=db.batch();
+    d.vehicles.forEach(v=>{const x=Object.assign({},v);delete x.id;b.set(db.doc('vehicles/'+v.id),x);});
+    d.trips.forEach(t=>{const x=Object.assign({},t);delete x.id;b.set(db.doc('trips/'+t.id),x);});
+    await b.commit();
+  },
+  async setCfg(c){if(db)return serial('cfg',()=>db.doc('config/site').set(c));S.cfg=c;renderAll();}
+};
+
+/* ---------- derived ---------- */
+function activeOf(vid){return allTrips().filter(t=>t.vehicleId===vid&&(t.status==='assigned'||t.status==='picked'));}
+function vState(v){
+  if(v.status==='off')return 'off';
+  if(v.status==='break')return 'break';
+  const now=Date.now();
+  return activeOf(v.id).some(t=>t.status==='picked'||!t.when||t.when<=now+60*MIN)?'busy':'free';
+}
+function doneToday(vid){const d0=dayStart();return allTrips().filter(t=>t.vehicleId===vid&&t.status==='done'&&t.doneAt>=d0).length;}
+function suggest(t){
+  return [...S.vehicles.values()].filter(v=>vState(v)==='free'&&(+v.seats||4)>=(+t.pax||1))
+    .map(v=>({v,score:(v.at===t.from?0:100)+doneToday(v.id)})).sort((a,b)=>a.score-b.score).map(x=>x.v);
+}
+function prio(t){const now=Date.now();if(t.kind==='meeting')return 0;if(t.when&&t.when<=now+20*MIN)return 1;return 2;}
+function nowQueue(){const now=Date.now();return tripsBy('waiting').filter(t=>!t.when||t.when<=now+30*MIN).sort((a,b)=>prio(a)-prio(b)||((a.when||a.createdAt)-(b.when||b.createdAt)));}
+function laterQueue(){const now=Date.now();return tripsBy('waiting').filter(t=>t.when&&t.when>now+30*MIN).sort((a,b)=>a.when-b.when);}
+function pools(){
+  const list=allTrips().filter(t=>t.kind==='outstation'&&(t.status==='approval'||t.status==='waiting')&&t.when).sort((a,b)=>a.when-b.when);
+  const groups=[];
+  for(const t of list){
+    const g=groups.find(g=>g.to===t.to&&new Date(g.start).toDateString()===new Date(t.when).toDateString()&&t.when-g.start<=90*MIN);
+    if(g)g.trips.push(t);else groups.push({to:t.to,start:t.when,trips:[t]});
+  }
+  return groups.filter(g=>g.trips.length>1);
+}
+const waitStart=t=>Math.max(t.createdAt||0,t.when||0);
+const vehOf=t=>t.vehicleId?S.vehicles.get(t.vehicleId):null;
+
+/* ---------- actions ---------- */
+async function assign(tid,vid,quiet){
+  const t=S.trips.get(tid);if(!t||t.status!=='waiting')return;
+  await act(store.updTrip(tid,{status:'assigned',vehicleId:vid,assignedAt:Date.now(),assignedBy:S.myId||null}));
+  if(!quiet){const v=S.vehicles.get(vid);toast(`${v?v.plate:'Vehicle'} assigned to ${t.passenger}`);}
+}
+async function autoAll(){
+  const used=new Set(),plan=[];
+  for(const t of nowQueue()){const v=suggest(t).find(v=>!used.has(v.id));if(v){used.add(v.id);plan.push([t.id,v.id]);}}
+  if(!plan.length){toast('No free vehicle with enough seats right now.');return;}
+  for(const [tid,vid] of plan)await assign(tid,vid,true);
+  const left=nowQueue().length;
+  toast(`Assigned ${plan.length} trip${plan.length>1?'s':''}.`+(left?` ${left} still waiting for a free vehicle.`:''));
+}
+async function picked(tid){await act(store.updTrip(tid,{status:'picked',pickedAt:Date.now()}));}
+async function dropped(tid){
+  const t=S.trips.get(tid);if(!t)return;
+  await act(store.updTrip(tid,{status:'done',doneAt:Date.now()}));
+  if(t.vehicleId&&S.vehicles.has(t.vehicleId))await act(store.updVeh(t.vehicleId,{at:t.to}));
+}
+
+document.addEventListener('click',async e=>{
+  const tabBtn=e.target.closest('[data-tab]');
+  if(tabBtn){setTab(tabBtn.dataset.tab);return;}
+  const rg=e.target.closest('[data-range]');
+  if(rg){S.range=rg.dataset.range;renderRecords();loadHist();return;}
+  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  const a=b.dataset.act,id=b.dataset.id,vid=b.dataset.vid;
+  try{
+    switch(a){
+      case 'autoall':await autoAll();break;
+      case 'auto':{const t=S.trips.get(id);const v=t&&suggest(t)[0];if(v)await assign(id,v.id);else toast('No free vehicle with enough seats. Pick one manually when one frees up.');break;}
+      case 'choose':S.openAssign=S.openAssign===id?null:id;renderTab();break;
+      case 'assign':await assign(id,vid);break;
+      case 'unassign':await act(store.updTrip(id,{status:'waiting',vehicleId:null,assignedAt:null}));toast('Back in the waiting list.');break;
+      case 'cancel':
+        if(S.confirm!=='cancel:'+id){S.confirm='cancel:'+id;renderTab();return;}
+        S.confirm=null;await act(store.updTrip(id,{status:'cancelled',cancelledAt:Date.now()}));toast('Request cancelled.');break;
+      case 'approve':await act(store.updTrip(id,{status:'waiting',approvedAt:Date.now(),approvedBy:S.myId||null}));toast('Approved. It is now in the schedule.');break;
+      case 'reject':
+        if(S.confirm!=='reject:'+id){S.confirm='reject:'+id;renderTab();return;}
+        S.confirm=null;await act(store.updTrip(id,{status:'rejected',rejectedAt:Date.now(),approvedBy:S.myId||null}));toast('Request marked not approved.');break;
+      case 'picked':await picked(id);toast('Marked as picked up.');break;
+      case 'dropped':await dropped(id);toast('Trip completed.');break;
+      case 'poolassign':{
+        const ids=id.split(',');const ts=ids.map(i=>S.trips.get(i)).filter(t=>t&&t.status==='waiting');
+        const pax=ts.reduce((s,t)=>s+(+t.pax||1),0);
+        const v=[...S.vehicles.values()].filter(v=>vState(v)==='free'&&(+v.seats||4)>=pax).sort((a,b)=>(+a.seats)-(+b.seats))[0];
+        if(!v){toast(`No free vehicle with ${pax} seats right now.`);break;}
+        for(const t of ts)await assign(t.id,v.id,true);
+        toast(`${v.plate} will take all ${ts.length} trips (${pax} people).`);break;
+      }
+      case 'vstatus':await act(store.updVeh(vid,{status:b.dataset.st}));break;
+      case 'vat':await act(store.updVeh(vid,{at:b.dataset.at}));break;
+      case 'vdel':
+        if(S.confirm!=='vdel:'+vid){S.confirm='vdel:'+vid;renderTab();return;}
+        S.confirm=null;await act(store.delVeh(vid));toast('Vehicle removed.');break;
+      case 'addstop':case 'addout':{
+        const inp=a==='addstop'?$('#f-stop-new'):$('#f-out-new');const name=inp.value.trim();if(!name)return;
+        const key=a==='addstop'?'stops':'outstation';const c=clone(S.cfg);
+        if(c[key].some(s=>s.toLowerCase()===name.toLowerCase())){toast('That place is already on the list.');return;}
+        c[key].push(name);inp.value='';await act(store.setCfg(c));break;
+      }
+      case 'delplace':{
+        const key=b.dataset.key,name=b.dataset.name;const c=clone(S.cfg);
+        if(c[key].length<=1){toast('Keep at least one place on the list.');return;}
+        c[key]=c[key].filter(s=>s!==name);await act(store.setCfg(c));break;
+      }
+      case 'clearsample':{
+        if(S.confirm!=='clearsample'){S.confirm='clearsample';b.classList.add('armed');b.textContent='Confirm: remove all sample data';return;}
+        S.confirm=null;
+        const ts=allTrips().filter(t=>t.sample),vs=[...S.vehicles.values()].filter(v=>v.sample);
+        for(const t of ts)await act(store.delTrip(t.id));
+        for(const v of vs)await act(store.delVeh(v.id));
+        toast(`Removed ${ts.length} sample trips and ${vs.length} sample vehicles.`);break;
+      }
+      case 'export':exportCsv();break;
+      case 'loadsample':await act(store.loadSample());toast('Sample vehicles and trips loaded. Remove them before going live.');break;
+    }
+  }catch(err){}
+  if(S.confirm&&!['cancel','reject','vdel','clearsample'].includes(a)){S.confirm=null;renderTab();}
+});
+
+/* ---------- booking form ---------- */
+function bookKind(){return document.querySelector('input[name="kind"]:checked').value;}
+function fillSelect(sel,items,keep){
+  const sig=JSON.stringify(items);if(sel.dataset.sig===sig)return;
+  const prev=keep!==undefined?keep:sel.value;
+  sel.innerHTML=items.map(i=>Array.isArray(i)?`<option value="${esc(i[0])}">${esc(i[1])}</option>`:`<option>${esc(i)}</option>`).join('');
+  sel.dataset.sig=sig;
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+}
+function syncBookForm(){
+  const k=bookKind();
+  fillSelect($('#b-from'),S.cfg.stops);
+  const toList=k==='outstation'?[...S.cfg.outstation,['__other','Other…']]:S.cfg.stops;
+  fillSelect($('#b-to'),toList);
+  if(k!=='outstation'&&$('#b-to').value===$('#b-from').value){const alt=S.cfg.stops.find(s=>s!==$('#b-from').value);if(alt)$('#b-to').value=alt;}
+  $('#b-other-wrap').hidden=!(k==='outstation'&&$('#b-to').value==='__other');
+  $('#b-when-site').hidden=k!=='site';
+  const later=document.querySelector('input[name="whenmode"]:checked').value==='later';
+  $('#b-when-wrap').hidden=k==='site'&&!later;
+  if(!$('#b-when-wrap').hidden&&!$('#b-when').value){const d=new Date(Date.now()+30*MIN);d.setMinutes(Math.ceil(d.getMinutes()/5)*5,0,0);const p=n=>String(n).padStart(2,'0');$('#b-when').value=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+  $('#b-when-label').textContent=k==='meeting'?'Be picked up at':k==='outstation'?'Leave pickup point at':'Pickup time';
+  $('#b-note-label').textContent=k==='meeting'?'Meeting (who is it with?)':k==='outstation'?'Reason / flight or train':'Note for driver';
+  $('#b-submit').textContent=k==='outstation'?'Send for approval':k==='meeting'?'Book priority pickup':'Request vehicle';
+}
+function initBookForm(){
+  fillSelect($('#b-dept'),DEPTS);
+  const me=LS.get('me',{});
+  $('#b-name').value=me.name||'';$('#b-emp').value=me.emp||'';$('#b-phone').value=me.phone||'';if(me.dept)$('#b-dept').value=me.dept;
+  $('#book-form').addEventListener('change',syncBookForm);
+  syncBookForm();
+  $('#book-form').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const err=$('#b-err');err.textContent='';
+    const k=bookKind(),from=$('#b-from').value;
+    let to=$('#b-to').value;if(to==='__other')to=$('#b-other').value.trim();
+    const name=$('#b-name').value.trim(),emp=$('#b-emp').value.trim(),dept=$('#b-dept').value,phone=$('#b-phone').value.trim();
+    const pax=Math.max(1,Math.min(12,parseInt($('#b-pax').value,10)||1));
+    const later=document.querySelector('input[name="whenmode"]:checked').value==='later';
+    const needsTime=k!=='site'||later;
+    const when=needsTime&&$('#b-when').value?new Date($('#b-when').value).getTime():null;
+    if(!name){err.textContent='Enter your name so the driver knows who to pick up.';$('#b-name').focus();return;}
+    if(!to){err.textContent='Enter where you are going.';return;}
+    if(from===to){err.textContent='Pickup and drop are the same place. Choose a different destination.';return;}
+    if(needsTime&&!when){err.textContent='Choose a pickup time.';$('#b-when').focus();return;}
+    if(when&&when<Date.now()-5*MIN){err.textContent='That time has already passed. Choose a time later than now.';return;}
+    if(!S.canWrite){err.textContent='This page is view-only for you.';return;}
+    LS.set('me',{name,emp,phone,dept});
+    const trip={passenger:name,empNo:emp,dept,phone,pax,from,to,kind:k,when,note:$('#b-note').value.trim(),
+      status:k==='outstation'?'approval':'waiting',vehicleId:null,createdAt:Date.now(),createdBy:S.myId||null};
+    try{
+      const id=await act(store.addTrip(trip));
+      memMine.unshift(id);const mine=LS.get('mine',[]);mine.unshift(id);LS.set('mine',mine.slice(0,40));
+      $('#b-note').value='';$('#b-other').value='';
+      toast(k==='outstation'?'Sent for approval. You will see the status here.':'Request sent. The dispatcher has it now.');
+      renderBook();
+    }catch(e2){}
+  });
+}
+
+/* ---------- vehicle form ---------- */
+function initVehForm(){
+  $('#veh-form').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const err=$('#v-err');err.textContent='';
+    const p=$('#v-plate').value.trim().toUpperCase().replace(/\s+/g,' ');
+    const id=p.replace(/[^A-Z0-9]/g,'');
+    if(id.length<4){err.textContent='Enter the full number plate, e.g. GJ 01 AB 1234.';return;}
+    if(S.vehicles.has(id)){err.textContent='This vehicle is already on the list.';return;}
+    const v={plate:p,type:$('#v-type').value,seats:Math.max(1,parseInt($('#v-seats').value,10)||4),driver:$('#v-driver').value.trim(),driverPhone:$('#v-dphone').value.trim(),at:$('#v-at').value,status:'available'};
+    try{await act(store.setVeh(id,v));$('#v-plate').value='';$('#v-driver').value='';$('#v-dphone').value='';toast(`${p} added.`);}catch(e2){}
+  });
+}
+
+/* ---------- rendering ---------- */
+function safeSet(el,html){
+  const a=document.activeElement;
+  if(a&&el.contains(a)&&/^(SELECT|INPUT|TEXTAREA)$/.test(a.tagName)){el.dataset.stale='1';return;}
+  el.innerHTML=html;el.dataset.stale='';
+}
+document.addEventListener('focusout',e=>{setTimeout(()=>{const el=e.target.closest&&e.target.closest('[data-stale="1"]');if(el)renderTab();},0);});
+
+function tripCard(t,opts){
+  opts=opts||{};
+  const now=Date.now(),v=vehOf(t);
+  const urgent=t.status==='waiting'&&(t.kind==='meeting'||(t.when&&t.when<=now+20*MIN));
+  let timing='';
+  if(t.status==='waiting'||t.status==='approval'){
+    if(t.when&&t.when>now)timing=`<span>Pickup <b class="num">${fmtDT(t.when)}</b> · in ${dur(mins(t.when-now))}</span>`;
+    else{const w=mins(now-waitStart(t));const cls=w>=20?'bad':w>=10?'warn':'';timing=`<span>Waiting ${cls?pill(dur(w),cls):'<b class="num">'+dur(w)+'</b>'}</span>`;}
+  }else if(t.status==='assigned'){timing=`<span>Assigned ${dur(mins(now-(t.assignedAt||now)))} ago</span>`+(t.when?`<span>Pickup <b class="num">${fmtDT(t.when)}</b></span>`:'');}
+  else if(t.status==='picked'){timing=`<span>Picked up ${fmtT(t.pickedAt)}</span>`;}
+  else if(t.status==='done'){timing=`<span>Dropped ${fmtT(t.doneAt)}</span>`;}
+  let actions='';
+  const C=(k)=>S.confirm===k;
+  if(opts.dispatch){
+    if(t.status==='waiting')actions=`<div class="btn-row"><button class="btn primary" data-act="auto" data-id="${t.id}" data-write>Auto-assign</button><button class="btn" data-act="choose" data-id="${t.id}" data-write>${S.openAssign===t.id?'Close':'Choose vehicle'}</button><button class="btn danger ${C('cancel:'+t.id)?'armed':''}" data-act="cancel" data-id="${t.id}" data-write>${C('cancel:'+t.id)?'Confirm cancel':'Cancel'}</button></div>`;
+    if(t.status==='approval')actions=`<div class="btn-row"><button class="btn primary" data-act="approve" data-id="${t.id}" data-write>Approve</button><button class="btn danger ${C('reject:'+t.id)?'armed':''}" data-act="reject" data-id="${t.id}" data-write>${C('reject:'+t.id)?'Confirm: not approved':'Not approved'}</button></div>`;
+    if(t.status==='assigned')actions=`<div class="btn-row"><button class="btn" data-act="picked" data-id="${t.id}" data-write>Mark picked up</button><button class="btn" data-act="unassign" data-id="${t.id}" data-write>Unassign</button></div>`;
+    if(t.status==='picked')actions=`<div class="btn-row"><button class="btn" data-act="dropped" data-id="${t.id}" data-write>Mark dropped</button></div>`;
+  }else if(opts.mine&&['waiting','approval','assigned'].includes(t.status)){
+    actions=`<div class="btn-row"><button class="btn danger ${C('cancel:'+t.id)?'armed':''}" data-act="cancel" data-id="${t.id}" data-write>${C('cancel:'+t.id)?'Confirm cancel':'Cancel request'}</button></div>`;
+  }
+  let picker='';
+  if(opts.dispatch&&S.openAssign===t.id&&t.status==='waiting'){
+    const list=suggest(t);
+    picker=`<div class="pick"><span class="hint">${list.length?'Free vehicles, nearest first:':'No free vehicle with '+(+t.pax||1)+' seats right now.'}</span>${list.map(v=>`<button data-act="assign" data-id="${t.id}" data-vid="${v.id}" data-write>${plate(v)}<span>${esc(v.driver||'Driver')} · ${esc(v.at||'?')}${v.at===t.from?' ✓':''} · ${v.seats} seats</span></button>`).join('')}</div>`;
+  }
+  const veh=v?`<div class="meta">${plate(v)}<span>${esc(v.driver||'')}</span>${v.driverPhone?`<span class="mono">${esc(v.driverPhone)}</span>`:''}</div>`:'';
+  return `<div class="trip ${urgent?'urgent':''}">
+    <div class="trip-top">
+      <div class="who">${esc(t.passenger)} <small>${esc([t.empNo,t.dept].filter(Boolean).join(' · '))}${(+t.pax||1)>1?' · '+t.pax+' people':''}</small>${sampleTag(t)}</div>
+      <div class="btn-row" style="gap:6px"><span class="tag ${t.kind}">${KIND[t.kind]||t.kind}</span>${pill(STATUS[t.status][0],STATUS[t.status][1])}</div>
+    </div>
+    <div class="route-line">${esc(t.from)} <span class="arr">→</span> ${esc(t.to)}</div>
+    <div class="meta">${timing}${t.phone?`<span class="mono">${esc(t.phone)}</span>`:''}</div>
+    ${t.note?`<div class="note">${esc(t.note)}</div>`:''}
+    ${veh}${actions}${picker}
+  </div>`;
+}
+
+function renderBook(){
+  const mine=new Set([...memMine,...LS.get('mine',[])]);const d0=dayStart();
+  const list=allTrips().filter(t=>(S.myId&&t.createdBy===S.myId)||mine.has(t.id))
+    .filter(t=>['waiting','approval','assigned','picked'].includes(t.status)||(t.createdAt>=d0)||(t.when&&t.when>=d0))
+    .sort((a,b)=>b.createdAt-a.createdAt).slice(0,8);
+  safeSet($('#my-rides'),list.length?list.map(t=>tripCard(t,{mine:true})).join(''):`<div class="empty">No rides yet. Your requests from this phone appear here with the vehicle number and driver once assigned.</div>`);
+}
+
+function renderDispatch(){
+  const now=Date.now();
+  const q=nowQueue(),vs=[...S.vehicles.values()];
+  const free=vs.filter(v=>vState(v)==='free').length,busy=vs.filter(v=>vState(v)==='busy').length;
+  const oldest=q.filter(t=>!t.when||t.when<=now).reduce((m,t)=>Math.max(m,mins(now-waitStart(t))),0);
+  const meet=tripsBy('waiting').filter(t=>t.kind==='meeting'&&t.when&&t.when<=now+60*MIN).length;
+  const appr=tripsBy('approval').length;
+  $('#d-kpis').innerHTML=[
+    ['Waiting now',q.length,q.length?`Longest wait ${dur(oldest)}`:'Nobody waiting',oldest>=15],
+    ['Free vehicles',`${free}<small style="font-size:16px"> / ${vs.length}</small>`,`${busy} on trip`,free===0&&q.length>0],
+    ['Meetings · next hour',meet,'Priority pickups',meet>0],
+    ['Awaiting approval',appr,'Going-home requests',appr>0]
+  ].map(([l,v,s,al])=>`<div class="kpi ${al?'alert':''}"><span>${l}</span><b>${v}</b><small>${s}</small></div>`).join('');
+
+  const stops=S.cfg.stops;
+  const freeAt=st=>vs.filter(v=>vState(v)==='free'&&v.at===st);
+  $('#d-route').innerHTML=`<div class="route">${stops.map(st=>{const f=freeAt(st);return `<div class="stn ${f.length?'has':''}"><span class="dot"></span><h3>${esc(st)}</h3><div class="vs">${f.length?f.map(plate).join(''):'<span class="none">No free vehicle</span>'}</div></div>`;}).join('')}</div>`;
+  const elsewhere=vs.filter(v=>vState(v)==='free'&&!stops.includes(v.at));
+  const grp=(lbl,arr)=>arr.length?`<div><span class="lbl">${lbl}</span>${arr.map(plate).join('')}</div>`:'';
+  $('#d-side').innerHTML=(grp('On trip',vs.filter(v=>vState(v)==='busy'))+grp('Free · elsewhere',elsewhere)+grp('On break',vs.filter(v=>vState(v)==='break'))+grp('Off duty',vs.filter(v=>vState(v)==='off')))||'<span class="muted">No vehicles added yet. Add them under Fleet &amp; setup.</span>';
+
+  safeSet($('#d-queue'),q.length?q.map(t=>tripCard(t,{dispatch:true})).join(''):`<div class="empty">Nobody is waiting. New requests appear here the moment staff book.</div>`);
+  const moving=[...tripsBy('picked'),...tripsBy('assigned').filter(t=>!t.when||t.when<=now+60*MIN)].sort((a,b)=>(a.assignedAt||0)-(b.assignedAt||0));
+  safeSet($('#d-moving'),moving.length?moving.map(t=>tripCard(t,{dispatch:true})).join(''):`<div class="empty">No trips in progress.</div>`);
+  const ap=tripsBy('approval').sort((a,b)=>(a.when||0)-(b.when||0));
+  safeSet($('#d-approval'),ap.length?ap.map(t=>tripCard(t,{dispatch:true})).join(''):`<div class="empty">No going-home requests waiting for approval.</div>`);
+  const later=[...laterQueue(),...tripsBy('assigned').filter(t=>t.when&&t.when>now+60*MIN)].sort((a,b)=>a.when-b.when);
+  safeSet($('#d-later'),later.length?later.map(t=>tripCard(t,{dispatch:true})).join(''):`<div class="empty">Nothing scheduled.</div>`);
+
+  const ps=pools();
+  $('#d-pools').innerHTML=ps.map(g=>{
+    const pax=g.trips.reduce((s,t)=>s+(+t.pax||1),0),last=g.trips[g.trips.length-1].when;
+    const ready=g.trips.filter(t=>t.status==='waiting');
+    return `<div class="trip" style="background:var(--accent-soft);border-color:var(--accent)"><div class="who">Share one vehicle: ${g.trips.length} requests to ${esc(g.to)}</div>
+      <div class="meta"><span>${fmtDT(g.start)}–${fmtT(last)}</span><span>${pax} people</span><span>${esc(g.trips.map(t=>t.passenger).join(', '))}</span></div>
+      ${ready.length>1?`<div class="btn-row"><button class="btn primary" data-act="poolassign" data-id="${ready.map(t=>t.id).join(',')}" data-write>Assign one vehicle to the ${ready.length} approved</button></div>`:`<div class="note">Approve these requests, then assign one vehicle to all of them.</div>`}</div>`;
+  }).join('');
+}
+
+function renderDriver(){
+  const sel=$('#drv-veh');const vs=[...S.vehicles.values()].sort((a,b)=>a.plate.localeCompare(b.plate));
+  const saved=LS.get('drv','');
+  fillSelect(sel,[['','Choose vehicle…'],...vs.map(v=>[v.id,`${v.plate} · ${v.driver||v.type}`])],sel.value||saved);
+  const v=S.vehicles.get(sel.value);
+  const body=$('#drv-body');
+  if(!v){safeSet(body,`<div class="empty">${vs.length?'Choose your vehicle above to see your trips.':'No vehicles yet. The admin adds them under Fleet &amp; setup.'}</div>`);return;}
+  const st=vState(v);
+  const jobs=activeOf(v.id).sort((a,b)=>(a.status==='picked'?-1:0)-(b.status==='picked'?-1:0)||((a.when||a.assignedAt)-(b.when||b.assignedAt)));
+  const statusBtns=[['available','Available · खाली'],['break','Break · ब्रेक'],['off','Off duty · छुट्टी']].map(([k,l])=>`<button class="chip" aria-pressed="${(v.status||'available')===k}" data-act="vstatus" data-vid="${v.id}" data-st="${k}" data-write>${l}</button>`).join('');
+  const atBtns=S.cfg.stops.map(s=>`<button class="chip" aria-pressed="${v.at===s}" data-act="vat" data-vid="${v.id}" data-at="${esc(s)}" data-write>${esc(s)}</button>`).join('');
+  const jobHtml=jobs.length?jobs.map(t=>`<div class="job">
+      <div class="trip-top"><div class="who">${esc(t.passenger)} <small>${esc(t.dept||'')}${(+t.pax||1)>1?' · '+t.pax+' people':''}</small>${sampleTag(t)}</div><span class="tag ${t.kind}">${KIND[t.kind]}</span></div>
+      <div class="big-route"><small>Pickup · यहाँ से लें</small>${esc(t.from)}</div>
+      <div class="big-route"><small>Drop · यहाँ छोड़ें</small>${esc(t.to)}</div>
+      <div class="meta">${t.when?`<span>Pickup time <b class="num">${fmtDT(t.when)}</b></span>`:`<span>As soon as possible</span>`}${t.phone?`<span>Passenger mobile <b class="mono">${esc(t.phone)}</b></span>`:''}</div>
+      ${t.note?`<div class="note">${esc(t.note)}</div>`:''}
+      ${t.status==='assigned'?`<button class="btn primary big" data-act="picked" data-id="${t.id}" data-write>Passenger picked up<small>सवारी बैठ गई</small></button>`:`<button class="btn primary big" data-act="dropped" data-id="${t.id}" data-write>Dropped at destination<small>सवारी छोड़ दी</small></button>`}
+    </div>`).join(''):`<div class="empty">No trip assigned. Stay at your pickup point. New trips appear here automatically.</div>`;
+  safeSet(body,`<div class="drv-head">${plate(v)}<div><b>${esc(v.driver||'')}</b><div class="muted">${esc(v.type)} · ${v.seats} seats · ${doneToday(v.id)} trips today</div></div>${pill(VSTATE[st][0],VSTATE[st][1])}${sampleTag(v)}</div>
+    <div class="field"><span>My status</span><div class="chips">${statusBtns}</div></div>
+    <div class="field"><span>I am at · मैं यहाँ हूँ</span><div class="chips">${atBtns}</div></div>
+    <h3>Current trips</h3>${jobHtml}`);
+}
+
+function rangeTrips(){
+  const now=Date.now();const since=S.range==='today'?dayStart():S.range==='7d'?now-7*DAY:S.range==='30d'?now-30*DAY:0;
+  return allTrips().filter(t=>(t.createdAt||0)>=since);
+}
+function avg(a){return a.length?a.reduce((s,x)=>s+x,0)/a.length:0;}
+function renderRecords(){
+  document.querySelectorAll('#r-range .chip').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.range===S.range)));
+  const ts=rangeTrips();
+  const done=ts.filter(t=>t.status==='done');
+  const waits=ts.filter(t=>t.pickedAt&&t.kind!=='outstation').map(t=>mins(t.pickedAt-waitStart(t)));
+  const meetings=ts.filter(t=>t.kind==='meeting'&&t.pickedAt&&t.when);
+  const onTime=meetings.filter(t=>t.pickedAt<=t.when+2*MIN).length;
+  const staff=new Set(ts.filter(t=>t.status!=='cancelled').map(t=>(t.empNo||t.passenger||'').toLowerCase())).size;
+  const outs=ts.filter(t=>t.kind==='outstation'&&t.status!=='rejected'&&t.status!=='cancelled').length;
+  const canc=ts.filter(t=>t.status==='cancelled').length;
+  const over15=waits.filter(w=>w>15).length;
+  $('#r-kpis').innerHTML=[
+    ['Trips completed',done.length,`${ts.length} requests in total`],
+    ['Average wait',waits.length?Math.round(avg(waits))+'<small style="font-size:16px"> min</small>':'–',waits.length?`${over15} waited over 15 min`:'Request to pickup'],
+    ['Meeting pickups on time',meetings.length?Math.round(onTime/meetings.length*100)+'%':'–',`${onTime} of ${meetings.length}`],
+    ['Staff served',staff,'Unique people'],
+    ['Going-home trips',outs,'Airport and station'],
+    ['Cancelled',canc,'Requests withdrawn']
+  ].map(([l,v,s])=>`<div class="kpi"><span>${l}</span><b>${v}</b><small>${s}</small></div>`).join('');
+
+  // hours chart
+  const counts=Array(24).fill(0);ts.forEach(t=>{counts[new Date(t.createdAt).getHours()]++;});
+  const first=5,last=23,hrs=[];for(let h=first;h<=last;h++)hrs.push(h);
+  const max=Math.max(1,...hrs.map(h=>counts[h]));const nice=max<=4?4:Math.ceil(max/4)*4;
+  const W=760,H=210,L=34,R=8,T=12,B=28,cw=(W-L-R)/hrs.length,bw=cw*0.62,y=v=>T+(H-T-B)*(1-v/nice);
+  const curH=new Date().getHours();
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Requests by hour of day">`;
+  for(let i=0;i<=4;i++){const v=nice*i/4,yy=y(v);svg+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}"/><text x="${L-6}" y="${yy+4}" text-anchor="end">${v}</text>`;}
+  hrs.forEach((h,i)=>{const x=L+i*cw+(cw-bw)/2,c=counts[h];if(c)svg+=`<rect class="bar ${S.range==='today'&&h===curH?'now':''}" x="${x}" y="${y(c)}" width="${bw}" height="${y(0)-y(c)}" rx="2"><title>${String(h).padStart(2,'0')}:00 · ${c} requests</title></rect>`;
+    if(i%2===0)svg+=`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle">${String(h).padStart(2,'0')}</text>`;});
+  svg+='</svg>';
+  $('#r-hours').innerHTML=ts.length?svg:'<div class="empty">No requests in this period.</div>';
+
+  // routes
+  const rm=new Map();ts.filter(t=>t.status!=='cancelled').forEach(t=>{const k=t.from+' → '+t.to;const r=rm.get(k)||{n:0,w:[]};r.n++;if(t.pickedAt)r.w.push(mins(t.pickedAt-waitStart(t)));rm.set(k,r);});
+  const routes=[...rm.entries()].sort((a,b)=>b[1].n-a[1].n).slice(0,8);const rmax=Math.max(1,...routes.map(r=>r[1].n));
+  $('#r-routes').innerHTML=routes.length?`<div class="tbl-wrap"><table><thead><tr><th>Route</th><th>Trips</th><th class="r">Avg wait</th></tr></thead><tbody>${routes.map(([k,r])=>`<tr><td>${esc(k)}</td><td><div class="bar-cell"><i style="width:${Math.round(r.n/rmax*90)}px"></i><span class="num">${r.n}</span></div></td><td class="r num">${r.w.length?Math.round(avg(r.w))+' min':'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No trips yet.</div>';
+
+  // dept
+  const dm=new Map();ts.filter(t=>t.status!=='cancelled').forEach(t=>{const k=t.dept||'Not given';const r=dm.get(k)||{n:0,o:0,p:new Set()};r.n++;if(t.kind==='outstation')r.o++;r.p.add((t.empNo||t.passenger||'').toLowerCase());dm.set(k,r);});
+  const depts=[...dm.entries()].sort((a,b)=>b[1].n-a[1].n);const dmax=Math.max(1,...depts.map(d=>d[1].n));
+  $('#r-dept').innerHTML=depts.length?`<div class="tbl-wrap"><table><thead><tr><th>Department</th><th>Trips</th><th class="r">People</th><th class="r">Going home</th></tr></thead><tbody>${depts.map(([k,r])=>`<tr><td>${esc(k)}</td><td><div class="bar-cell"><i style="width:${Math.round(r.n/dmax*90)}px"></i><span class="num">${r.n}</span></div></td><td class="r num">${r.p.size}</td><td class="r num">${r.o}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No trips yet.</div>';
+
+  // vehicles
+  const vrows=[...S.vehicles.values()].map(v=>{const vt=done.filter(t=>t.vehicleId===v.id);const m=vt.reduce((s,t)=>s+mins((t.doneAt||0)-(t.assignedAt||t.doneAt||0)),0);return {v,n:vt.length,m};}).sort((a,b)=>b.n-a.n);
+  const vmax=Math.max(1,...vrows.map(r=>r.n));
+  $('#r-veh').innerHTML=vrows.length?`<div class="tbl-wrap"><table><thead><tr><th>Vehicle</th><th>Driver</th><th>Type</th><th>Trips done</th><th class="r">Time on trips</th></tr></thead><tbody>${vrows.map(r=>`<tr><td>${plate(r.v)}</td><td>${esc(r.v.driver||'')}</td><td>${esc(r.v.type)}</td><td><div class="bar-cell"><i style="width:${Math.round(r.n/vmax*90)}px"></i><span class="num">${r.n}</span></div></td><td class="r num">${r.m?dur(r.m):'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No vehicles yet.</div>';
+  renderLog();
+}
+function renderLog(){
+  const q=S.logQ.toLowerCase();
+  const rows=rangeTrips().filter(t=>{if(!q)return true;const v=vehOf(t);return [t.passenger,t.empNo,t.dept,t.from,t.to,v&&v.plate,v&&v.driver].join(' ').toLowerCase().includes(q);}).sort((a,b)=>b.createdAt-a.createdAt);
+  const shown=rows.slice(0,300);
+  $('#r-log').innerHTML=rows.length?`<div class="tbl-wrap tall"><table><thead><tr><th>Requested</th><th>Passenger</th><th>Emp no.</th><th>Dept</th><th>From → To</th><th>Type</th><th>Vehicle</th><th class="r">Wait</th><th>Status</th></tr></thead><tbody>${shown.map(t=>{const v=vehOf(t);return `<tr><td class="num">${fmtD(t.createdAt)} ${fmtT(t.createdAt)}</td><td>${esc(t.passenger)}${(+t.pax||1)>1?' +'+(t.pax-1):''}</td><td class="mono">${esc(t.empNo||'')}</td><td>${esc(t.dept||'')}</td><td>${esc(t.from)} → ${esc(t.to)}</td><td>${KIND[t.kind]||''}</td><td>${v?plate(v):''}</td><td class="r num">${t.pickedAt?mins(t.pickedAt-waitStart(t))+' min':''}</td><td>${pill(STATUS[t.status][0],STATUS[t.status][1])}</td></tr>`;}).join('')}</tbody></table></div>${rows.length>shown.length?`<p class="muted">Showing the latest 300 of ${rows.length}. Export to see all.</p>`:''}`:'<div class="empty">No trips match.</div>';
+}
+function buildCsv(){
+  const cols=['Requested at','Passenger','Emp no','Department','Mobile','People','From','To','Type','Pickup time asked','Vehicle','Driver','Status','Assigned at','Picked up at','Dropped at','Wait (min)','Note'];
+  const iso=ms=>ms?new Date(ms).toLocaleString('en-IN',{hour12:false}):'';
+  const cell=x=>{const s=String(x==null?'':x);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const rows=rangeTrips().sort((a,b)=>a.createdAt-b.createdAt).map(t=>{const v=vehOf(t);return [iso(t.createdAt),t.passenger,t.empNo,t.dept,t.phone,t.pax,t.from,t.to,KIND[t.kind],iso(t.when),v?v.plate:'',v?v.driver:'',STATUS[t.status][0],iso(t.assignedAt),iso(t.pickedAt),iso(t.doneAt),t.pickedAt?mins(t.pickedAt-waitStart(t)):'',t.note];});
+  return [cols,...rows].map(r=>r.map(cell).join(',')).join('\n');
+}
+function exportCsv(){
+  const csv='\ufeff'+buildCsv();const name=`site-transport-trips-${S.range}-${new Date().toISOString().slice(0,10)}.csv`;
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);toast('Trip log downloaded. Open it in Excel.');
+}
+
+function renderFleet(){
+  const vs=[...S.vehicles.values()].sort((a,b)=>a.plate.localeCompare(b.plate));
+  safeSet($('#f-veh'),vs.length?`<div class="tbl-wrap"><table><thead><tr><th>Vehicle</th><th>Type</th><th class="r">Seats</th><th>Driver</th><th>Mobile</th><th>Now</th><th>Parked at</th><th>Trips today</th><th></th></tr></thead><tbody>${vs.map(v=>{const st=vState(v);const armed=S.confirm==='vdel:'+v.id;return `<tr><td>${plate(v)}${sampleTag(v)}</td><td>${esc(v.type)}</td><td class="r num">${v.seats}</td><td>${esc(v.driver||'')}</td><td class="mono">${esc(v.driverPhone||'')}</td><td>${pill(VSTATE[st][0],VSTATE[st][1])}</td><td>${esc(v.at||'')}</td><td class="num">${doneToday(v.id)}</td><td><button class="btn danger ${armed?'armed':''}" data-act="vdel" data-vid="${v.id}" data-write>${armed?'Confirm remove':'Remove'}</button></td></tr>`;}).join('')}</tbody></table></div>`:`<div class="empty">No vehicles yet. Add the first one below.</div>`);
+  fillSelect($('#v-at'),S.cfg.stops);
+  const chips=(key)=>S.cfg[key].map(s=>`<span>${esc(s)}<button data-act="delplace" data-key="${key}" data-name="${esc(s)}" aria-label="Remove ${esc(s)}" data-write>×</button></span>`).join('');
+  $('#f-stops').innerHTML=chips('stops');$('#f-outs').innerHTML=chips('outstation');
+  $('#f-links').innerHTML=[['Dispatcher (Deepak)','dispatch'],['Drivers','driver'],['Management records','records'],...S.cfg.stops.map(s=>[s,'from-'+slug(s)])].map(([a,h])=>`<tr><td>${esc(a)}</td><td><code>#${h}</code></td></tr>`).join('');
+  const hasSample=allTrips().some(t=>t.sample)||vs.some(v=>v.sample);
+  const btn=$('#btn-clear-sample');btn.hidden=!hasSample||S.mode!=='live';
+  $('#btn-load-sample').hidden=hasSample||S.mode!=='live';
+  if(S.confirm!=='clearsample'){btn.classList.remove('armed');btn.textContent='Remove sample data';}
+}
+
+function renderTab(){
+  ({book:renderBook,dispatch:renderDispatch,driver:renderDriver,records:renderRecords,fleet:renderFleet})[S.tab]();
+  applyWriteState();
+}
+function renderAll(){
+  const m=$('#mode');
+  m.className='mode '+(S.mode==='live'?(S.canWrite?'live':''):S.mode==='demo'?'demo':'');
+  m.textContent=S.mode==='live'?(S.canWrite?'Live · shared':'View only'):S.mode==='demo'?'Demo · not saved':'Connecting…';
+  const ban=$('#banner');
+  if(S.mode==='demo'){ban.hidden=false;ban.innerHTML=S.demoReason==='error'?'<b>Could not connect to the database.</b> Showing example data; changes are not saved. Check <code>firebase-config.js</code> and that Anonymous sign-in is turned on in Firebase.':'<b>Demo mode.</b> The database is not connected yet, so this shows example data and changes are not saved. Add your Firebase settings to <code>firebase-config.js</code> (see README).';}
+  else if(S.connErr){ban.hidden=false;ban.innerHTML='<b>Database refused access.</b> Publish the Firestore rules from the README, then reload.';}
+  else ban.hidden=true;
+  const n=(S.mode==='live'&&!started.has('active'))?0:nowQueue().length+tripsBy('approval').length;$('#cnt-dispatch').textContent=n?String(n):'';
+  syncBookForm();
+  renderTab();
+}
+function applyWriteState(){document.querySelectorAll('[data-write]').forEach(b=>{b.disabled=!S.canWrite;});}
+
+function setTab(t,fromHash){
+  if(!TABS.includes(t))t='book';
+  S.tab=t;S.openAssign=null;S.confirm=null;
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));
+  TABS.forEach(x=>{$('#v-'+x).hidden=x!==t;});
+  ensureScope(t);
+  renderTab();
+  if(!fromHash){try{window.scrollTo({top:0});}catch(e){}}
+}
+function readHash(){
+  const h=(location.hash||'').slice(1);
+  if(h.startsWith('from-')){const st=S.cfg.stops.find(s=>'from-'+slug(s)===h);setTab('book',true);if(st){$('#b-from').value=st;syncBookForm();}return;}
+  if(TABS.includes(h))setTab(h,true);
+}
+
+/* ---------- boot ---------- */
+function startDemo(reason){
+  const d=sampleData(Date.now());
+  S.vehicles=new Map(d.vehicles.map(v=>[v.id,v]));S.trips=new Map(d.trips.map(t=>[t.id,t]));
+  S.mode='demo';S.demoReason=reason||'setup';S.canWrite=true;renderAll();readHash();
+}
+const SRC={};const started=new Set();
+function mergeTrips(){const m=new Map();for(const k of ['hist','today','active','mine'])if(SRC[k])SRC[k].forEach((t,id)=>m.set(id,t));S.trips=m;renderAll();}
+function listen(key,query){
+  if(started.has(key))return;started.add(key);
+  query.onSnapshot(snap=>{SRC[key]=new Map(snap.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id})]));mergeTrips();},onDbErr);
+}
+function onDbErr(e){console.error(e);if(e&&e.code==='permission-denied'){S.connErr=true;renderAll();}}
+function ensureScope(tab){
+  if(!db)return;
+  if(tab==='book'){
+    if(S.myId)listen('mine',db.collection('trips').where('createdBy','==',S.myId));
+  }else{
+    listen('active',db.collection('trips').where('status','in',['approval','waiting','assigned','picked']));
+    listen('today',db.collection('trips').where('createdAt','>=',dayStart()));
+  }
+  if(tab==='records')loadHist();
+}
+let histKey='',histAt=0;
+async function loadHist(force){
+  if(!db)return;
+  const now=Date.now();const since=S.range==='today'?dayStart():S.range==='7d'?now-7*DAY:S.range==='30d'?now-30*DAY:0;
+  if(!force&&histKey===S.range&&now-histAt<120000)return;
+  histKey=S.range;histAt=now;
+  try{
+    const snap=await db.collection('trips').where('createdAt','>=',since).orderBy('createdAt','desc').limit(5000).get();
+    SRC.hist=new Map(snap.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id})]));mergeTrips();
+  }catch(e){onDbErr(e);}
+}
+function subscribe(){
+  db.collection('vehicles').onSnapshot(snap=>{
+    S.vehicles=new Map(snap.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id})]));S.loaded.vehicles=true;renderAll();
+  },onDbErr);
+  db.doc('config/site').onSnapshot(s=>{
+    const d=s.exists?s.data():null;
+    S.cfg={stops:d&&Array.isArray(d.stops)&&d.stops.length?d.stops.slice():DEFAULT_CFG.stops.slice(),outstation:d&&Array.isArray(d.outstation)&&d.outstation.length?d.outstation.slice():DEFAULT_CFG.outstation.slice()};
+    renderAll();
+  },onDbErr);
+  ensureScope(S.tab);
+}
+async function boot(){
+  initBookForm();initVehForm();
+  $('#drv-veh').addEventListener('change',e=>{LS.set('drv',e.target.value);renderDriver();});
+  $('#r-q').addEventListener('input',e=>{S.logQ=e.target.value;renderLog();});
+  window.addEventListener('hashchange',readHash);
+  const tick=()=>{$('#clock').textContent=fmtT(Date.now());};tick();
+  setInterval(()=>{tick();if(S.mode!=='loading'&&['book','dispatch','driver'].includes(S.tab))renderAll();},20000);
+  renderAll();readHash();
+  const cfg=window.FIREBASE_CONFIG;
+  if(!window.firebase||!cfg||!cfg.apiKey||/PASTE/i.test(cfg.apiKey)){startDemo('setup');return;}
+  try{
+    firebase.initializeApp(cfg);
+    const auth=firebase.auth();
+    await auth.signInAnonymously();
+    S.myId=auth.currentUser?auth.currentUser.uid:null;
+    db=firebase.firestore();
+    try{db.settings({ignoreUndefinedProperties:true,merge:true});}catch(e){}
+    S.mode='live';subscribe();renderAll();readHash();
+  }catch(e){console.error(e);startDemo('error');}
+}
+boot();
+})();
+</script>
+</body>
+</html>
