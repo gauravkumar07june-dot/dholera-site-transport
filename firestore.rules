@@ -1,15 +1,9 @@
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function known(col) { return col in ['trips', 'vehicles', 'config']; }
-
-    // Only the three collections the site uses; everything else is closed.
-    match /{col}/{id} {
-      allow read: if signedIn() && known(col);
-      allow create, update: if signedIn() && known(col)
-        && request.resource.data.size() <= 40;
-      allow delete: if signedIn() && known(col);
-    }
-  }
-}
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBJXRjZ8d1gz-Zrgl4IwmJz8aFMSCuEKmk",
+  authDomain: "dholera-project-cdcfe.firebaseapp.com",
+  projectId: "dholera-project-cdcfe",
+  storageBucket: "dholera-project-cdcfe.firebasestorage.app",
+  messagingSenderId: "403348455212",
+  appId: "1:403348455212:web:0aeae031eb4e0c7ad3f689",
+  measurementId: "G-4L9SNYZ880"
+};
