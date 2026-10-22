@@ -1,11 +1,9 @@
-// Paste your Firebase web app settings here.
-// Firebase console → Project settings (gear icon) → General → Your apps → Web app → "SDK setup and configuration" → Config.
-// Until this is filled in, the site runs in demo mode with example data.
 window.FIREBASE_CONFIG = {
-  apiKey: "PASTE_YOUR_API_KEY",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyBJXRjZ8d1gz-Zrgl4IwmJz8aFMSCuEKmk",
+  authDomain: "dholera-project-cdcfe.firebaseapp.com",
+  projectId: "dholera-project-cdcfe",
+  storageBucket: "dholera-project-cdcfe.firebasestorage.app",
+  messagingSenderId: "403348455212",
+  appId: "1:403348455212:web:0aeae031eb4e0c7ad3f689",
+  measurementId: "G-4L9SNYZ880"
 };
