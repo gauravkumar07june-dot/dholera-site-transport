@@ -10,4 +10,4 @@ window.FIREBASE_CONFIG = {
 
 // The transport admin's sign-in email. Must match the email in firestore.rules
 // and a user created in Firebase → Authentication → Users.
-window.ADMIN_EMAILS = ["PASTE_ADMIN_EMAIL"];
+   window.ADMIN_EMAILS = ["gaurav.kumar21@lntecc.com"];
