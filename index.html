@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B6B66">
+<meta name="description" content="Staff vehicle booking, admin dispatch, driver screen and trip records for the Dholera FAB site.">
+<title>Dholera Site Transport</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* Layout: sticky site header + role tabs; each role is one working view. Dispatch opens on a route strip showing where every vehicle stands. */
+:root{
+  --bg:#EDF0EE; --surface:#FFFFFF; --surface-2:#F5F7F6; --ink:#16201D; --ink-2:#55625C; --line:#D3DBD7;
+  --accent:#0B6B66; --accent-ink:#FFFFFF; --accent-soft:#D6EBE8;
+  --signal:#C2410C; --signal-soft:#FCE5D8;
+  --ok:#157A3C; --ok-soft:#DBF1E2; --warn:#A35C07; --warn-soft:#FBEACB; --bad:#B42318; --bad-soft:#FBE0DD; --idle:#5E6B78; --idle-soft:#E4E9ED;
+  --plate-bg:#FFFFFF; --plate-ink:#111111; --plate-edge:#1B1B1B; --plate-band:#1D4FBF; --plate-band-ink:#FFFFFF;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#151D1A; --surface-2:#1B2521; --ink:#E4EBE8; --ink-2:#9AA9A2; --line:#2A3631;
+  --accent:#43B8AE; --accent-ink:#062220; --accent-soft:#163A37;
+  --signal:#FB8B50; --signal-soft:#3B2216;
+  --ok:#5BD98B; --ok-soft:#14311F; --warn:#F5B94A; --warn-soft:#352812; --bad:#F7867B; --bad-soft:#3A1916; --idle:#A3B0BD; --idle-soft:#242C34;
+  --plate-bg:#ECEFEE; --plate-ink:#111111; --plate-edge:#000000; --plate-band:#2B5BC7; --plate-band-ink:#FFFFFF;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#151D1A; --surface-2:#1B2521; --ink:#E4EBE8; --ink-2:#9AA9A2; --line:#2A3631;
+  --accent:#43B8AE; --accent-ink:#062220; --accent-soft:#163A37;
+  --signal:#FB8B50; --signal-soft:#3B2216;
+  --ok:#5BD98B; --ok-soft:#14311F; --warn:#F5B94A; --warn-soft:#352812; --bad:#F7867B; --bad-soft:#3A1916; --idle:#A3B0BD; --idle-soft:#242C34;
+  --plate-bg:#ECEFEE; --plate-ink:#111111; --plate-edge:#000000; --plate-band:#2B5BC7; --plate-band-ink:#FFFFFF;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:.01em;margin:0;text-wrap:balance}
+h2{font-size:20px;line-height:1.15}
+h3{font-size:17px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num,.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-2)}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:10px 0}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1 1 220px}
+.brand h1{font-size:26px;line-height:1;text-transform:uppercase;letter-spacing:.03em}
+.brand h1 i{font-style:normal;color:var(--accent)}
+.brand small{color:var(--ink-2);font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-top:3px}
+.status-row{display:flex;align-items:center;gap:10px}
+.clock{font-family:var(--font-mono);font-size:15px;font-weight:600}
+.mode{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--idle-soft);color:var(--idle);white-space:nowrap}
+.mode.live{background:var(--ok-soft);color:var(--ok)}
+.mode.demo{background:var(--warn-soft);color:var(--warn)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;width:100%;margin-top:8px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:none;padding:10px 14px 11px;font-family:var(--font-display);font-size:17px;font-weight:600;letter-spacing:.02em;color:var(--ink-2);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .count{font-family:var(--font-mono);font-size:11px;background:var(--signal);color:var(--surface);border-radius:999px;padding:1px 6px;font-weight:600}
+.tab .count:empty{display:none}
+
+main.wrap{padding-block:18px 48px;display:flex;flex-direction:column;gap:16px}
+.banner{padding:10px 14px;border-radius:var(--r);background:var(--warn-soft);color:var(--ink);border:1px solid var(--line);font-size:13px}
+.banner b{color:var(--warn)}
+
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.panel-h p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;align-items:start}
+.cols-book{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.cols-book{grid-template-columns:1fr}}
+.empty{padding:18px;border:1px dashed var(--line);border-radius:var(--r);color:var(--ink-2);font-size:13px;text-align:center}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r);padding:7px 12px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn.danger.armed{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.btn.big{padding:14px 16px;font-size:16px;width:100%;display:flex;flex-direction:column;align-items:center;gap:1px}
+.btn.big small{font-weight:500;font-size:13px;opacity:.85}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* forms */
+form{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field>span{font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+.field textarea{resize:vertical;min-height:58px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg label{display:flex;flex-direction:column;gap:2px;padding:10px 12px;cursor:pointer;border-right:1px solid var(--line);background:var(--surface-2);min-width:0}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg b{font-family:var(--font-display);font-size:17px;font-weight:600}
+.seg small{font-size:12px;color:var(--ink-2)}
+.seg label:has(input:checked){background:var(--accent-soft);box-shadow:inset 0 -3px 0 var(--accent)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+@media (max-width:520px){.seg{grid-template-columns:1fr}.seg label{border-right:0;border-bottom:1px solid var(--line)}.seg label:last-child{border-bottom:0}}
+.inline-radios{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.inline-radios label{display:flex;gap:6px;align-items:center;font-weight:500}
+.form-err{color:var(--bad);font-size:13px;min-height:1em}
+
+/* pills & plates */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;background:var(--idle-soft);color:var(--idle)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.pill.sig{background:var(--signal-soft);color:var(--signal)}
+.tag{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid var(--line);color:var(--ink-2)}
+.tag.meeting{border-color:var(--signal);color:var(--signal)}
+.tag.outstation{border-color:var(--accent);color:var(--accent)}
+.plate{display:inline-flex;align-items:stretch;font-family:var(--font-mono);font-weight:600;font-size:12px;border:1.5px solid var(--plate-edge);border-radius:4px;background:var(--plate-bg);color:var(--plate-ink);overflow:hidden;white-space:nowrap;line-height:1.5}
+.plate b{background:var(--plate-band);color:var(--plate-band-ink);font-size:7.5px;padding:0 3px;display:flex;align-items:center;letter-spacing:.04em;font-family:var(--font-body)}
+.plate span{padding:1px 6px}
+
+/* trip rows */
+.list{display:flex;flex-direction:column;gap:8px}
+.trip{border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--surface);min-width:0}
+.trip.urgent{border-color:var(--signal);background:linear-gradient(var(--signal-soft),var(--signal-soft)) top/100% 3px no-repeat,var(--surface)}
+.trip-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.who{font-weight:600}
+.who small{font-weight:400;color:var(--ink-2)}
+.route-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--font-display);font-size:18px;font-weight:600}
+.route-line .arr{color:var(--ink-2);font-family:var(--font-body);font-size:14px}
+.meta{display:flex;gap:8px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);align-items:center}
+.note{font-size:13px;color:var(--ink-2);font-style:italic}
+.pick{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface-2);border-radius:var(--r)}
+.pick button{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:3px;font-size:12px}
+.pick button:hover{border-color:var(--accent)}
+.pick .hint{width:100%;font-size:12px;color:var(--ink-2)}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi span{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.kpi b{font-family:var(--font-display);font-size:32px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi small{font-size:12px;color:var(--ink-2)}
+.kpi.alert b{color:var(--signal)}
+
+/* route strip */
+.route-wrap{overflow-x:auto;padding-bottom:4px}
+.route{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(132px,1fr);position:relative;min-width:max-content}
+.route::before{content:"";position:absolute;left:24px;right:24px;top:15px;height:4px;background:var(--accent);border-radius:2px;opacity:.35}
+.stn{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:0 10px;position:relative}
+.stn .dot{width:20px;height:20px;border-radius:50%;background:var(--surface);border:4px solid var(--accent);margin-top:7px;z-index:1}
+.stn.has .dot{background:var(--accent)}
+.stn h3{font-size:15px;line-height:1.1}
+.stn .vs{display:flex;flex-direction:column;gap:4px}
+.stn .none{font-size:12px;color:var(--ink-2)}
+.side-groups{display:flex;gap:18px;flex-wrap:wrap;padding-top:6px;border-top:1px solid var(--line)}
+.side-groups>div{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.side-groups .lbl{font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+
+/* driver */
+.drv-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.drv-head .plate{font-size:18px}
+.drv-head .plate b{font-size:9px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.job{border:2px solid var(--accent);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
+.job .big-route{font-family:var(--font-display);font-size:26px;font-weight:600;line-height:1.1}
+.job .big-route small{display:block;font-family:var(--font-body);font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);background:var(--surface-2);font-weight:600;position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.tbl-wrap.tall{max-height:460px;overflow:auto}
+.bar-cell{display:flex;align-items:center;gap:8px}
+.bar-cell i{display:block;height:8px;border-radius:2px;background:var(--accent);min-width:2px}
+
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--ink-2);font-family:var(--font-mono);font-size:11px}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .bar{fill:var(--accent)}
+.chart .bar.now{fill:var(--signal)}
+
+.settings-list{display:flex;flex-wrap:wrap;gap:6px}
+.settings-list span{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:var(--surface-2)}
+.settings-list button{appearance:none;border:0;background:none;cursor:pointer;color:var(--ink-2);font-size:15px;line-height:1;padding:0 4px}
+.settings-list button:hover{color:var(--bad)}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+code{font-family:var(--font-mono);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:3px;border:1px solid var(--line)}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);font-size:13.5px;font-weight:500;max-width:calc(100% - 32px);z-index:20;box-shadow:0 6px 24px rgb(0 0 0 / .2)}
+.loading{padding:40px 0;text-align:center;color:var(--ink-2)}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .18s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
+
+/* v2 additions: approval queue, fill meter, WhatsApp hand-off, admin sign-in */
+:root{--wa:#1C7F46;--wa-ink:#FFFFFF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--wa:#3CC676;--wa-ink:#06210F}}
+:root[data-theme="dark"]{--wa:#3CC676;--wa-ink:#06210F}
+.btn.wa{background:var(--wa);border-color:var(--wa);color:var(--wa-ink);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn.wa:hover{filter:brightness(1.08)}
+a.btn{text-decoration:none;color:inherit}
+.admin-chip{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+.link-btn{appearance:none;border:0;background:none;padding:0;color:var(--ink-2);font-size:12px;text-decoration:underline;cursor:pointer}
+.link-btn:hover{color:var(--bad)}
+.link-btn.armed{color:var(--bad);font-weight:600}
+.fill{display:flex;align-items:center;gap:10px;font-size:13px}
+.fill .bar{display:flex;gap:3px}
+.fill .bar i{width:22px;height:8px;border-radius:2px;background:var(--idle-soft)}
+.fill .bar i.on{background:var(--warn)}
+.fill.ready .bar i.on{background:var(--ok)}
+.fill b{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.people li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.people li:first-child{border-top:0}
+.people .note{width:100%}
+.notice{border:2px solid var(--wa);background:var(--surface);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
+.notice h3{font-size:19px}
+.alertbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px dashed var(--line);border-radius:var(--r);background:var(--surface);font-size:13px}
+.alertbar.on{border-style:solid;border-color:var(--ok);background:var(--ok-soft)}
+.login{max-width:420px;margin:24px auto;width:100%}
+.rule-note{font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Dholera <i>Site</i> Transport</h1>
+      <small>TSMPL FAB project · staff vehicles</small>
+    </div>
+    <div class="status-row">
+      <span class="admin-chip" id="admin-chip" hidden>Admin <button class="link-btn" data-act="signout">Sign out</button></span>
+      <span class="mode" id="mode">Connecting…</span>
+      <span class="clock" id="clock">--:--</span>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" data-tab="book" aria-selected="true">Book a ride</button>
+      <button class="tab" role="tab" data-tab="dispatch">Admin · Dispatch <span class="count" id="cnt-dispatch"></span></button>
+      <button class="tab" role="tab" data-tab="driver">Driver</button>
+      <button class="tab" role="tab" data-tab="records">Records</button>
+      <button class="tab" role="tab" data-tab="fleet">Fleet &amp; setup</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- BOOK -->
+  <section id="v-book" class="cols-book">
+    <div class="panel">
+      <div class="panel-h"><div><h2>Request a vehicle</h2><p>Your request goes straight to the transport admin. No phone call needed.</p></div></div>
+      <form id="book-form" novalidate>
+        <div class="seg" role="radiogroup" aria-label="Trip type">
+          <label><input type="radio" name="kind" value="site" checked><b>Shared ride</b><small id="seg-site-hint">Leaves when 4 people are going the same way</small></label>
+          <label><input type="radio" name="kind" value="urgent"><b>Urgent</b><small>Meeting or emergency · admin decides</small></label>
+          <label><input type="radio" name="kind" value="outstation"><b>Going home</b><small>Airport, station · admin approves</small></label>
+        </div>
+        <div class="grid2">
+          <label class="field"><span>From</span><select id="b-from"></select></label>
+          <label class="field"><span>To</span><select id="b-to"></select></label>
+        </div>
+        <label class="field" id="b-other-wrap" hidden><span>Destination name</span><input id="b-other" placeholder="e.g. Bhavnagar bus stand"></label>
+        <div class="field" id="b-when-site">
+          <span>When</span>
+          <div class="inline-radios">
+            <label><input type="radio" name="whenmode" value="now" checked> Now</label>
+            <label><input type="radio" name="whenmode" value="later"> Later</label>
+          </div>
+        </div>
+        <label class="field" id="b-when-wrap" hidden><span id="b-when-label">Pickup time</span><input type="datetime-local" id="b-when"></label>
+        <div class="grid2">
+          <label class="field"><span>Your name</span><input id="b-name" autocomplete="name" placeholder="Full name"></label>
+          <label class="field"><span>Employee no.</span><input id="b-emp" placeholder="PS no."></label>
+          <label class="field"><span>Department</span><select id="b-dept"></select></label>
+          <label class="field"><span>Mobile</span><input id="b-phone" inputmode="tel" placeholder="So the driver can call"></label>
+          <label class="field"><span>People (incl. you)</span><input id="b-pax" type="number" min="1" max="12" value="1"></label>
+        </div>
+        <label class="field"><span id="b-note-label">Note for admin</span><textarea id="b-note" placeholder="Optional"></textarea></label>
+        <div class="rule-note" id="b-rule"></div>
+        <div class="form-err" id="b-err" role="alert"></div>
+        <button class="btn primary big" type="submit" data-write><span id="b-submit">Send request</span><small>गाड़ी के लिए अनुरोध भेजें</small></button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Your rides</h2><p>Live status of requests made from this phone.</p></div></div>
+      <div id="my-rides" class="list"></div>
+    </div>
+  </section>
+
+  <!-- ADMIN SIGN-IN -->
+  <section id="v-login" hidden>
+    <div class="panel login">
+      <h2 id="login-title">Admin sign-in</h2>
+      <p class="muted" style="margin:0" id="login-sub">Dispatch, records and fleet setup are only for the transport admin.</p>
+      <form id="login-form" novalidate>
+        <label class="field"><span>Email</span><input id="l-email" type="email" autocomplete="username"></label>
+        <label class="field"><span>Password</span><input id="l-pass" type="password" autocomplete="current-password"></label>
+        <div class="form-err" id="l-err" role="alert"></div>
+        <button class="btn primary" type="submit">Sign in</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- DISPATCH -->
+  <section id="v-dispatch" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div id="d-notice"></div>
+    <div class="alertbar" id="d-alertbar"></div>
+    <div class="kpis" id="d-kpis"></div>
+    <div class="cols">
+      <div class="panel">
+        <div class="panel-h"><div><h2>Shared rides</h2><p id="d-shared-sub">Requests grouped by route. Send a vehicle once 4 people are going.</p></div></div>
+        <div id="d-shared" class="list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><div><h2>Urgent requests</h2><p>One person, one vehicle. Only if you approve it.</p></div></div>
+        <div id="d-urgent" class="list"></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <div class="panel-h"><div><h2>Going home</h2><p>Airport and station trips, grouped by destination and time.</p></div></div>
+        <div id="d-outs" class="list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><div><h2>On the move</h2><p>Assigned vehicles. Mark pickups here if a driver has no phone.</p></div></div>
+        <div id="d-moving" class="list"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Where the vehicles are</h2><p>Free vehicles parked at each pickup point.</p></div></div>
+      <div class="route-wrap" id="d-route"></div>
+      <div class="side-groups" id="d-side"></div>
+    </div>
+  </section>
+
+  <!-- DRIVER -->
+  <section id="v-driver" hidden>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Driver screen</h2><p>Pick your vehicle once. This phone remembers it.</p></div>
+        <label class="field" style="min-width:220px"><span>Your vehicle · आपकी गाड़ी</span><select id="drv-veh"></select></label>
+      </div>
+      <div class="alertbar" id="drv-alertbar"></div>
+      <div id="drv-body" style="display:flex;flex-direction:column;gap:14px"></div>
+    </div>
+  </section>
+
+  <!-- RECORDS -->
+  <section id="v-records" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div class="panel-h">
+      <div class="chips" id="r-range">
+        <button class="chip" data-range="today" aria-pressed="true">Today</button>
+        <button class="chip" data-range="7d" aria-pressed="false">Last 7 days</button>
+        <button class="chip" data-range="30d" aria-pressed="false">Last 30 days</button>
+        <button class="chip" data-range="all" aria-pressed="false">All</button>
+      </div>
+      <button class="btn" data-act="export">Export trip log (CSV)</button>
+    </div>
+    <div class="kpis" id="r-kpis"></div>
+    <div class="panel chart">
+      <div class="panel-h"><div><h2>Requests by hour</h2><p>When staff ask for vehicles. Use it to plan vehicles per shift.</p></div></div>
+      <div id="r-hours"></div>
+    </div>
+    <div class="cols">
+      <div class="panel"><h2>Busiest routes</h2><div id="r-routes"></div></div>
+      <div class="panel"><h2>By department</h2><div id="r-dept"></div></div>
+    </div>
+    <div class="panel"><h2>Vehicle use</h2><div id="r-veh"></div></div>
+    <div class="panel">
+      <div class="panel-h"><h2>Trip log</h2>
+        <input id="r-q" placeholder="Search name, emp no., place, vehicle" style="padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);min-width:0;width:min(100%,320px)">
+      </div>
+      <div id="r-log"></div>
+    </div>
+  </section>
+
+  <!-- FLEET -->
+  <section id="v-fleet" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div class="panel">
+      <h2>Admin settings</h2>
+      <form id="set-form" novalidate>
+        <div class="grid2">
+          <label class="field"><span>Admin WhatsApp number</span><input id="s-phone" inputmode="tel" placeholder="98XXXXXXXX"></label>
+          <label class="field"><span>Minimum people for a shared ride</span><input id="s-min" type="number" min="1" max="12" value="4"></label>
+        </div>
+        <p class="muted" style="margin:0;font-size:13px">Staff marking a request urgent can message this number on WhatsApp. Shared rides below the minimum go only if you send them as urgent.</p>
+        <div><button class="btn primary" type="submit" data-write>Save settings</button></div>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Vehicles</h2><p>Add each driver's mobile so trips can be sent to them on WhatsApp.</p></div>
+        <div class="btn-row"><button class="btn" data-act="loadsample" data-write id="btn-load-sample" hidden>Load sample data</button><button class="btn danger" data-act="clearsample" data-write id="btn-clear-sample" hidden>Remove sample data</button></div></div>
+      <div id="f-veh"></div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <h2>Add a vehicle</h2>
+        <form id="veh-form" novalidate>
+          <div class="grid2">
+            <label class="field"><span>Number plate</span><input id="v-plate" placeholder="GJ 01 AB 1234"></label>
+            <label class="field"><span>Type</span><select id="v-type"><option>Dzire</option><option>Innova Crysta</option><option>Ertiga</option><option>Bolero</option><option>Tempo Traveller</option><option>Bus</option><option>Other</option></select></label>
+            <label class="field"><span>Seats</span><input id="v-seats" type="number" min="1" max="60" value="4"></label>
+            <label class="field"><span>Parked at</span><select id="v-at"></select></label>
+            <label class="field"><span>Driver name</span><input id="vf-name"></label>
+            <label class="field"><span>Driver WhatsApp mobile</span><input id="v-dphone" inputmode="tel" placeholder="98XXXXXXXX"></label>
+          </div>
+          <div class="form-err" id="v-err" role="alert"></div>
+          <button class="btn primary" type="submit" data-write>Add vehicle</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Pickup points</h2>
+        <div class="settings-list" id="f-stops"></div>
+        <div class="add-row"><input id="f-stop-new" placeholder="New pickup point, e.g. WWT Building"><button class="btn" data-act="addstop" data-write>Add</button></div>
+        <h2 style="margin-top:6px">Outstation destinations</h2>
+        <div class="settings-list" id="f-outs"></div>
+        <div class="add-row"><input id="f-out-new" placeholder="e.g. Dhandhuka bus stand"><button class="btn" data-act="addout" data-write>Add</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Direct links for QR codes</h2>
+      <p class="muted" style="margin:0">Print these links as QR codes. A poster at FAB gate opens the booking form with FAB already filled in. Bookmark the dispatch link on the admin's phone and the driver link on drivers' phones.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Poster / phone</th><th>Link</th></tr></thead><tbody id="f-links"></tbody></table></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+/*SAMPLE*/
+function sampleData(now){
+  const M=60000;
+  const V=[
+    ["GJ 01 KT 4417","Innova Crysta",6,"Ramesh Parmar","FAB Building","available"],
+    ["GJ 01 RM 2286","Dzire",4,"Sanjay Vaghela","Project Office","available"],
+    ["GJ 18 BX 9031","Ertiga",6,"Imran Shaikh","Gate No. 1","available"],
+    ["GJ 01 HV 5520","Tempo Traveller",12,"Bharat Solanki","CUP Building","available"],
+    ["GJ 27 TD 7704","Dzire",4,"Mahesh Rathod","Plot 4","available"],
+    ["GJ 01 WP 3398","Innova Crysta",6,"Kiran Desai","Guest House 1","available"],
+    ["GJ 18 AZ 1162","Bolero",6,"Vikram Chauhan","Project Office","break"],
+    ["GJ 01 NN 8845","Dzire",4,"Rakesh Patel","Gate No. 1","available"]];
+  const vehicles=V.map(([plate,type,seats,driver,at,status])=>({id:plate.replace(/[^A-Za-z0-9]/g,'').toUpperCase(),plate,type,seats,driver,driverPhone:'',at,status,sample:true}));
+  const vid=i=>vehicles[i].id;
+  const P=[["Neha Joshi","MEP"],["Arjun Rao","Civil"],["Priya Nair","Planning"],["Vivek Sharma","QA/QC"],["Sameer Khan","HSE"],["Anil Kumar","Procurement"],["Deepa Iyer","Management"],["Rohit Verma","MEP"],["Kunal Shah","Client / PMC"],["Meera Pillai","Admin & HR"],["Harish Menon","Civil"],["Tanvi Desai","Planning"],["Farhan Ali","MEP"],["Suresh Yadav","HSE"],["Pooja Kulkarni","QA/QC"],["Manoj Tiwari","Procurement"]];
+  const trips=[];let n=0;
+  const add=(p,from,to,kind,extra)=>{n++;trips.push(Object.assign({id:'sample-'+String(n).padStart(2,'0'),passenger:P[p][0],empNo:'S'+(40100+p*37),dept:P[p][1],phone:'',pax:1,from,to,kind,when:null,note:'',status:'approval',vehicleId:null,createdAt:now,createdBy:null,sample:true},extra));};
+  const grp=(ps,from,to,ago,wait,ride,v,opt)=>{opt=opt||{};const c=now-ago*M,gid='gs'+n;
+    ps.forEach((p,i)=>{const pax=Array.isArray(p)?p[1]:1,pi=Array.isArray(p)?p[0]:p;
+      const base={pax,vehicleId:vid(v),groupId:gid,createdAt:c+i*M,assignedAt:c+(wait-3)*M,urgentOverride:!!opt.urgent,note:opt.note||''};
+      if(opt.when)base.when=opt.when;
+      if(opt.state==='assigned')Object.assign(base,{status:'assigned',assignedAt:now-3*M});
+      else if(opt.state==='picked')Object.assign(base,{status:'picked',assignedAt:now-10*M,pickedAt:now-4*M});
+      else Object.assign(base,{status:'done',pickedAt:c+wait*M,doneAt:c+(wait+ride)*M});
+      add(pi,from,to,opt.kind||'site',base);});};
+  grp([0,1,2,3],"Project Office","FAB Building",420,12,8,1);
+  grp([4,5,6,7,8],"Gate No. 1","CUP Building",380,14,7,3);
+  grp([9],"FAB Building","Project Office",300,5,8,0,{kind:'urgent',note:'Client meeting at 11:00'});
+  grp([1,3,5,7],"CUP Building","Project Office",240,10,9,5);
+  grp([[2,2],[0,2]],"Plot 4","FAB Building",200,9,10,4);
+  grp([10],"Gate No. 1","Plot 4",170,6,7,7,{urgent:true,note:'Inspection called by client'});
+  grp([8,9,4,2],"Project Office","Guest House 2",120,11,14,5);
+  grp([0,1,6,3,5],"FAB Building","CUP Building",80,8,6,3);
+  grp([7,8,9,4],"FAB Building","Project Office",22,12,8,0,{state:'picked'});
+  grp([2,3,5,0],"Gate No. 1","CUP Building",15,12,7,2,{state:'assigned'});
+  add(10,"Plot 4","Project Office","site",{pax:2,createdAt:now-9*M});
+  add(11,"Plot 4","Project Office","site",{createdAt:now-4*M});
+  [12,13,14,15].forEach((p,i)=>add(p,"CUP Building","FAB Building","site",{createdAt:now-(11-i*3)*M}));
+  add(6,"CUP Building","Project Office","urgent",{when:now+25*M,note:"Weekly MEP review with client",createdAt:now-12*M});
+  const tm=new Date(now);tm.setDate(tm.getDate()+1);tm.setHours(6,30,0,0);const t0=tm.getTime();
+  add(7,"Guest House 1","Ahmedabad Airport","outstation",{when:t0,note:"Morning flight, home leave",createdAt:now-50*M});
+  add(8,"Guest House 2","Ahmedabad Airport","outstation",{when:t0+30*M,pax:2,note:"Flight at 10:30",createdAt:now-35*M});
+  add(13,"Guest House 1","Ahmedabad Railway Station","outstation",{when:t0+8*60*M,note:"Train home",createdAt:now-80*M});
+  add(5,"Project Office","Plot 4","site",{status:'cancelled',createdAt:now-200*M,cancelledAt:now-196*M});
+  return {vehicles,trips};
+}
+/*ENDSAMPLE*/
+
+(function(){
+"use strict";
+const MIN=60000,DAY=864e5;
+const DEPTS=["MEP","Civil","Planning","QA/QC","HSE","Procurement","Admin & HR","Client / PMC","Management","Other"];
+const DEFAULT_CFG={stops:["Project Office","Gate No. 1","FAB Building","CUP Building","WWT Building","Plot 4","Guest House 1","Guest House 2"],outstation:["Ahmedabad Airport","Ahmedabad Railway Station"],minShared:4,adminPhone:""};
+const STATUS={approval:['Waiting for admin','sig'],assigned:['Vehicle assigned','acc'],picked:['On board','acc'],done:['Completed','ok'],cancelled:['Cancelled',''],rejected:['Not approved','bad']};
+const KIND={site:'Shared ride',urgent:'Urgent',outstation:'Going home'};
+const VSTATE={free:['Free','ok'],busy:['On trip','warn'],break:['On break','idle'],off:['Off duty','']};
+const TABS=['book','dispatch','driver','records','fleet'];
+const ADMIN_TABS=['dispatch','records','fleet'];
+
+const S={trips:new Map(),vehicles:new Map(),cfg:clone(DEFAULT_CFG),mode:'loading',canWrite:true,myId:null,isAdmin:false,tab:'book',
+  openAssign:null,assignUrgent:false,confirm:null,notice:null,range:'today',logQ:'',connErr:false};
+let db=null,auth=null;const memMine=[];
+
+function clone(o){return JSON.parse(JSON.stringify(o))}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const LS={get(k,d){try{const v=localStorage.getItem('dst:'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('dst:'+k,JSON.stringify(v))}catch(e){}}};
+const fmtT=ms=>new Date(ms).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
+const fmtD=ms=>new Date(ms).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+function fmtDT(ms){const d=new Date(ms),n=new Date();if(d.toDateString()===n.toDateString())return 'Today '+fmtT(ms);if(new Date(n.getTime()+DAY).toDateString()===d.toDateString())return 'Tomorrow '+fmtT(ms);return fmtD(ms)+' '+fmtT(ms);}
+const mins=ms=>Math.max(0,Math.round(ms/MIN));
+const dur=m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':'');
+function dayStart(){const d=new Date();d.setHours(0,0,0,0);return d.getTime();}
+const plate=v=>v?`<span class="plate"><b>IND</b><span>${esc(v.plate)}</span></span>`:'';
+const pill=(txt,cls)=>`<span class="pill ${cls||''}">${esc(txt)}</span>`;
+const st=t=>STATUS[t.status]||[t.status,''];
+const sampleTag=o=>o&&o.sample?' <span class="tag">Sample</span>':'';
+const allTrips=()=>[...S.trips.values()];
+const tripsBy=s=>allTrips().filter(t=>t.status===s);
+const paxOf=ts=>ts.reduce((s,t)=>s+(+t.pax||1),0);
+const minShared=()=>Math.max(1,+S.cfg.minShared||4);
+const pageUrl=()=>location.href.split('#')[0];
+function waLink(phone,text){const d=String(phone||'').replace(/\D/g,'');const num=d.length===10?'91'+d:d;return (num?`https://wa.me/${num}`:'https://wa.me/')+'?text='+encodeURIComponent(text);}
+const ADMIN_EMAILS=(window.ADMIN_EMAILS||[]).map(e=>String(e).trim().toLowerCase()).filter(e=>e&&!/paste/i.test(e));
+
+/* ---------- toast & errors ---------- */
+let toastTimer;
+function toast(msg){const el=$('#toast');el.textContent=msg;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true},3400);}
+async function act(p){
+  try{return await p;}
+  catch(e){
+    console.error(e);const code=e&&e.code;
+    if(code==='permission-denied')toast(S.isAdmin?"The database refused this change. Check the Firestore rules.":"Only the transport admin can do that.");
+    else if(code==='resource-exhausted')toast("Today's free database limit is used up. It resets tomorrow.");
+    else toast("Couldn't save just now. Check the connection and try again.");
+    throw e;
+  }
+}
+
+/* ---------- alerts (sound + notification) ---------- */
+const Alerts={on:false,ctx:null,reg:null,wake:null,
+  async enable(){
+    try{this.ctx=this.ctx||new (window.AudioContext||window.webkitAudioContext)();await this.ctx.resume();}catch(e){}
+    try{if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission();}catch(e){}
+    try{if('serviceWorker' in navigator&&location.protocol==='https:')this.reg=await navigator.serviceWorker.register('sw.js');}catch(e){}
+    this.on=true;await this.keepAwake();this.beep();renderTab();toast('Alerts are on. Keep this page open.');
+  },
+  async keepAwake(){try{if(this.on&&'wakeLock' in navigator&&document.visibilityState==='visible')this.wake=await navigator.wakeLock.request('screen');}catch(e){}},
+  beep(){
+    if(this.ctx){const c=this.ctx;[0,0.28,0.56].forEach(t=>{try{const o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=t===0.28?1175:880;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(0.0001,c.currentTime+t);g.gain.exponentialRampToValueAtTime(0.25,c.currentTime+t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+t+0.22);o.start(c.currentTime+t);o.stop(c.currentTime+t+0.24);}catch(e){}});}
+    try{if(navigator.vibrate)navigator.vibrate([250,120,250]);}catch(e){}
+  },
+  notify(title,body,hash){
+    if(!this.on)return;this.beep();
+    try{if('Notification' in window&&Notification.permission==='granted'){
+      const opts={body,tag:'dst-'+Date.now(),data:{hash:hash||''}};
+      if(this.reg&&this.reg.showNotification)this.reg.showNotification(title,opts);else new Notification(title,opts);
+    }}catch(e){}
+  },
+  bar(){return this.on
+    ?`<span><b>Alerts on.</b> This phone will ring for every new request. Keep the page open and the screen on.</span>`
+    :`<span>Turn on alerts so this phone rings and shows a notification for every new request.</span><button class="btn primary" data-act="alerts">Turn on alerts</button>`;}
+};
+document.addEventListener('visibilitychange',()=>{Alerts.keepAwake();});
+
+/* ---------- store ---------- */
+const queues={};
+function serial(key,fn){const p=(queues[key]||Promise.resolve()).catch(()=>{}).then(fn);queues[key]=p;return p;}
+const store={
+  async addTrip(d){
+    if(db){const ref=db.collection('trips').doc();await serial('t/'+ref.id,()=>ref.set(d));return ref.id;}
+    const id='local-'+Math.random().toString(36).slice(2,9);S.trips.set(id,Object.assign({},d,{id}));renderAll();return id;
+  },
+  async updTrip(id,p){
+    if(db)return serial('t/'+id,()=>db.doc('trips/'+id).update(p));
+    const t=S.trips.get(id);if(t){S.trips.set(id,Object.assign({},t,p));renderAll();}
+  },
+  async delTrip(id){if(db)return serial('t/'+id,()=>db.doc('trips/'+id).delete());S.trips.delete(id);renderAll();},
+  async setVeh(id,d){
+    const body=Object.assign({},d);delete body.id;
+    if(db)return serial('v/'+id,()=>db.doc('vehicles/'+id).set(body));
+    S.vehicles.set(id,Object.assign({},body,{id}));renderAll();
+  },
+  async updVeh(id,p){
+    if(db)return serial('v/'+id,()=>db.doc('vehicles/'+id).update(p));
+    const v=S.vehicles.get(id);if(v){S.vehicles.set(id,Object.assign({},v,p));renderAll();}
+  },
+  async delVeh(id){if(db)return serial('v/'+id,()=>db.doc('vehicles/'+id).delete());S.vehicles.delete(id);renderAll();},
+  async setCfg(c){if(db)return serial('cfg',()=>db.doc('config/site').set(c));S.cfg=c;renderAll();},
+  async loadSample(){
+    const d=sampleData(Date.now());
+    if(!db){d.vehicles.forEach(v=>S.vehicles.set(v.id,v));d.trips.forEach(t=>S.trips.set(t.id,t));renderAll();return;}
+    const b=db.batch();
+    d.vehicles.forEach(v=>{const x=Object.assign({},v);delete x.id;b.set(db.doc('vehicles/'+v.id),x);});
+    d.trips.forEach(t=>{const x=Object.assign({},t);delete x.id;b.set(db.doc('trips/'+t.id),x);});
+    await b.commit();
+  }
+};
+
+/* ---------- derived ---------- */
+function activeOf(vid){return allTrips().filter(t=>t.vehicleId===vid&&(t.status==='assigned'||t.status==='picked'));}
+function vState(v){
+  if(v.status==='off')return 'off';
+  if(v.status==='break')return 'break';
+  const now=Date.now();
+  return activeOf(v.id).some(t=>t.status==='picked'||!t.when||t.when<=now+60*MIN)?'busy':'free';
+}
+function doneToday(vid){const d0=dayStart();return new Set(allTrips().filter(t=>t.vehicleId===vid&&t.status==='done'&&t.doneAt>=d0).map(t=>t.groupId||t.id)).size;}
+function freeFor(from,pax){
+  const free=[...S.vehicles.values()].filter(v=>vState(v)==='free');
+  const score=v=>(v.at===from?0:100)+doneToday(v.id)+((+v.seats||4)-pax)*0.01;
+  const fit=free.filter(v=>(+v.seats||4)>=pax).sort((a,b)=>score(a)-score(b));
+  const small=free.filter(v=>(+v.seats||4)<pax).sort((a,b)=>(+b.seats)-(+a.seats));
+  return {fit,small};
+}
+function pendKey(t){
+  if(t.kind==='urgent')return 'u|'+t.id;
+  const span=t.kind==='outstation'?60:30;
+  const b=t.when?Math.floor(t.when/(span*MIN)):'now';
+  return [t.kind,t.from,t.to,b].join('|');
+}
+function pendingGroups(kind){
+  const m=new Map();
+  tripsBy('approval').filter(t=>!kind||t.kind===kind).forEach(t=>{const k=pendKey(t);if(!m.has(k))m.set(k,[]);m.get(k).push(t);});
+  return [...m.entries()].map(([key,trips])=>{
+    trips.sort((a,b)=>a.createdAt-b.createdAt);
+    const when=trips.map(t=>t.when).filter(Boolean).sort((a,b)=>a-b)[0]||null;
+    return {key,kind:trips[0].kind,trips,pax:paxOf(trips),from:trips[0].from,to:trips[0].to,when,oldest:trips[0].createdAt};
+  });
+}
+function findGroup(key){return pendingGroups().find(g=>g.key===key);}
+function activeGroups(vid){
+  const m=new Map();
+  allTrips().filter(t=>(t.status==='assigned'||t.status==='picked')&&(!vid||t.vehicleId===vid)).forEach(t=>{const k=t.groupId||t.id;if(!m.has(k))m.set(k,[]);m.get(k).push(t);});
+  return [...m.entries()].map(([gid,trips])=>({gid,trips,v:S.vehicles.get(trips[0].vehicleId),picked:trips.every(t=>t.status==='picked'),when:trips.map(t=>t.when).filter(Boolean).sort()[0]||null,assignedAt:Math.min(...trips.map(t=>t.assignedAt||0))}))
+    .sort((a,b)=>(a.when||a.assignedAt)-(b.when||b.assignedAt));
+}
+const waitStart=t=>Math.max(t.createdAt||0,t.when||0);
+const vehOf=t=>t.vehicleId?S.vehicles.get(t.vehicleId):null;
+function driverMsg(v,trips){
+  const t0=trips[0];
+  return [`Dholera Site Transport: new trip for ${v.plate}`,
+    `Pickup: ${t0.from} (${t0.when?fmtDT(t0.when):'now'})`,
+    `Drop: ${t0.to}`,
+    `Passengers (${paxOf(trips)}):`,
+    ...trips.map((t,i)=>`${i+1}. ${t.passenger}${(+t.pax||1)>1?' +'+(t.pax-1):''}${t.phone?' - '+t.phone:''}`),
+    trips.some(t=>t.note)?`Note: ${trips.filter(t=>t.note).map(t=>t.note).join('; ')}`:'',
+    `Driver screen: ${pageUrl()}#driver`].filter(Boolean).join('\n');
+}
+function adminMsg(t){
+  return [`Urgent vehicle request - Dholera Site Transport`,`${t.passenger}${t.empNo?' ('+t.empNo+')':''}, ${t.dept||''}`,`${t.from} to ${t.to}`,`Time: ${t.when?fmtDT(t.when):'now'}`,t.note?`Reason: ${t.note}`:'',`Open: ${pageUrl()}#dispatch`].filter(Boolean).join('\n');
+}
+
+/* ---------- actions ---------- */
+async function assignGroup(trips,vid,urgent){
+  const now=Date.now(),gid='g'+now.toString(36)+Math.random().toString(36).slice(2,5);
+  for(const t of trips)await act(store.updTrip(t.id,{status:'assigned',vehicleId:vid,assignedAt:now,assignedBy:S.myId||null,groupId:gid,urgentOverride:!!urgent}));
+  S.openAssign=null;S.assignUrgent=false;S.notice={vid,gid,ids:trips.map(t=>t.id)};
+  renderTab();window.scrollTo&&window.scrollTo({top:0,behavior:'smooth'});
+}
+async function setGroupStatus(gid,status){
+  const g=activeGroups().find(x=>x.gid===gid);if(!g)return;const now=Date.now();
+  for(const t of g.trips){
+    if(status==='picked'&&t.status==='assigned')await act(store.updTrip(t.id,{status:'picked',pickedAt:now}));
+    if(status==='done')await act(store.updTrip(t.id,{status:'done',doneAt:now,pickedAt:t.pickedAt||now}));
+  }
+  if(status==='done'&&g.v)await act(store.updVeh(g.v.id,{at:g.trips[0].to}));
+}
+
+document.addEventListener('click',async e=>{
+  const tabBtn=e.target.closest('[data-tab]');
+  if(tabBtn){setTab(tabBtn.dataset.tab);return;}
+  const rg=e.target.closest('[data-range]');
+  if(rg){S.range=rg.dataset.range;renderRecords();loadHist();return;}
+  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  const a=b.dataset.act,id=b.dataset.id,vid=b.dataset.vid,key=b.dataset.key;
+  const arm=k=>{if(S.confirm!==k){S.confirm=k;renderTab();return true;}S.confirm=null;return false;};
+  try{
+    switch(a){
+      case 'alerts':await Alerts.enable();break;
+      case 'signout':if(auth){await auth.signOut();toast('Signed out.');}break;
+      case 'choose':S.openAssign=S.openAssign===key?null:key;S.assignUrgent=false;renderTab();break;
+      case 'sendurgent':if(arm('urg:'+key))return;S.openAssign=key;S.assignUrgent=true;renderTab();break;
+      case 'assign':{const g=findGroup(key);if(!g){toast('This request was already handled.');S.openAssign=null;renderTab();break;}
+        await assignGroup(g.trips,vid,g.kind==='site'&&g.pax<minShared());break;}
+      case 'reject':if(arm('rej:'+id))return;await act(store.updTrip(id,{status:'rejected',rejectedAt:Date.now(),rejectedBy:S.myId||null}));toast('Marked as not approved.');break;
+      case 'rejectgroup':{if(arm('rejg:'+key))return;const g=findGroup(key);if(g)for(const t of g.trips)await act(store.updTrip(t.id,{status:'rejected',rejectedAt:Date.now(),rejectedBy:S.myId||null}));toast('Marked as not approved.');break;}
+      case 'cancel':if(arm('cancel:'+id))return;await act(store.updTrip(id,{status:'cancelled',cancelledAt:Date.now()}));toast('Request cancelled.');break;
+      case 'gpicked':await setGroupStatus(id,'picked');toast('Marked as picked up.');break;
+      case 'gdone':await setGroupStatus(id,'done');toast('Trip completed.');break;
+      case 'unassign':{if(arm('unas:'+id))return;const g=activeGroups().find(x=>x.gid===id);if(g)for(const t of g.trips)await act(store.updTrip(t.id,{status:'approval',vehicleId:null,assignedAt:null,groupId:null,urgentOverride:false}));toast('Back in the approval queue.');break;}
+      case 'closenotice':S.notice=null;renderTab();break;
+      case 'vstatus':await act(store.updVeh(vid,{status:b.dataset.st}));break;
+      case 'vat':await act(store.updVeh(vid,{at:b.dataset.at}));break;
+      case 'vdel':if(arm('vdel:'+vid))return;await act(store.delVeh(vid));toast('Vehicle removed.');break;
+      case 'vphone':{const inp=document.getElementById('vp-'+vid);if(inp){await act(store.updVeh(vid,{driverPhone:inp.value.trim()}));toast('Driver mobile saved.');}break;}
+      case 'addstop':case 'addout':{
+        const inp=a==='addstop'?$('#f-stop-new'):$('#f-out-new');const name=inp.value.trim();if(!name)return;
+        const k=a==='addstop'?'stops':'outstation';const c=clone(S.cfg);
+        if(c[k].some(s=>s.toLowerCase()===name.toLowerCase())){toast('That place is already on the list.');return;}
+        c[k].push(name);inp.value='';await act(store.setCfg(c));break;
+      }
+      case 'delplace':{const k=b.dataset.key2,name=b.dataset.name;const c=clone(S.cfg);
+        if(c[k].length<=1){toast('Keep at least one place on the list.');return;}
+        c[k]=c[k].filter(s=>s!==name);await act(store.setCfg(c));break;}
+      case 'loadsample':await act(store.loadSample());toast('Sample vehicles and trips loaded. Remove them before going live.');break;
+      case 'clearsample':{if(arm('clearsample'))return;
+        const ts=allTrips().filter(t=>t.sample),vs=[...S.vehicles.values()].filter(v=>v.sample);
+        for(const t of ts)await act(store.delTrip(t.id));for(const v of vs)await act(store.delVeh(v.id));
+        toast(`Removed ${ts.length} sample trips and ${vs.length} sample vehicles.`);break;}
+      case 'export':exportCsv();break;
+    }
+  }catch(err){}
+  if(S.confirm&&!/^(reject|rejectgroup|cancel|sendurgent|unassign|vdel|clearsample)$/.test(a)){S.confirm=null;renderTab();}
+});
+
+/* ---------- booking form ---------- */
+function bookKind(){return document.querySelector('input[name="kind"]:checked').value;}
+function fillSelect(sel,items,keep){
+  const sig=JSON.stringify(items);if(sel.dataset.sig===sig)return;
+  const prev=keep!==undefined?keep:sel.value;
+  sel.innerHTML=items.map(i=>Array.isArray(i)?`<option value="${esc(i[0])}">${esc(i[1])}</option>`:`<option>${esc(i)}</option>`).join('');
+  sel.dataset.sig=sig;
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+}
+function syncBookForm(){
+  const k=bookKind(),min=minShared();
+  $('#seg-site-hint').textContent=`Leaves when ${min} people are going the same way`;
+  fillSelect($('#b-from'),S.cfg.stops);
+  fillSelect($('#b-to'),k==='outstation'?[...S.cfg.outstation,['__other','Other…']]:S.cfg.stops);
+  if(k!=='outstation'&&$('#b-to').value===$('#b-from').value){const alt=S.cfg.stops.find(s=>s!==$('#b-from').value);if(alt)$('#b-to').value=alt;}
+  $('#b-other-wrap').hidden=!(k==='outstation'&&$('#b-to').value==='__other');
+  $('#b-when-site').hidden=k==='outstation';
+  const later=document.querySelector('input[name="whenmode"]:checked').value==='later';
+  $('#b-when-wrap').hidden=k!=='outstation'&&!later;
+  if(!$('#b-when-wrap').hidden&&!$('#b-when').value){const d=new Date(Date.now()+30*MIN);d.setMinutes(Math.ceil(d.getMinutes()/5)*5,0,0);const p=n=>String(n).padStart(2,'0');$('#b-when').value=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+  $('#b-when-label').textContent=k==='outstation'?'Leave pickup point at':'Pickup time';
+  $('#b-note-label').textContent=k==='urgent'?'Why is it urgent? (required)':k==='outstation'?'Reason / flight or train':'Note for admin';
+  $('#b-note').placeholder=k==='urgent'?'e.g. Client meeting at 3 pm in Project Office':'Optional';
+  $('#b-submit').textContent=k==='urgent'?'Send urgent request':k==='outstation'?'Send for approval':'Join shared ride';
+  $('#b-rule').innerHTML=k==='site'?`Shared rides leave when <b>${min} people</b> are going from the same point to the same place. The admin sends the vehicle as soon as the group is full.`
+    :k==='urgent'?`The admin decides whether to send a vehicle just for you. Use this only for meetings and emergencies.`
+    :`The admin approves going-home trips and puts people leaving at the same time in one vehicle.`;
+}
+function initBookForm(){
+  fillSelect($('#b-dept'),DEPTS);
+  const me=LS.get('me',{});
+  $('#b-name').value=me.name||'';$('#b-emp').value=me.emp||'';$('#b-phone').value=me.phone||'';if(me.dept)$('#b-dept').value=me.dept;
+  $('#book-form').addEventListener('change',syncBookForm);
+  syncBookForm();
+  $('#book-form').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const err=$('#b-err');err.textContent='';
+    const k=bookKind(),from=$('#b-from').value;
+    let to=$('#b-to').value;if(to==='__other')to=$('#b-other').value.trim();
+    const name=$('#b-name').value.trim(),emp=$('#b-emp').value.trim(),dept=$('#b-dept').value,phone=$('#b-phone').value.trim();
+    const pax=Math.max(1,Math.min(12,parseInt($('#b-pax').value,10)||1));
+    const note=$('#b-note').value.trim();
+    const later=document.querySelector('input[name="whenmode"]:checked').value==='later';
+    const needsTime=k==='outstation'||later;
+    const when=needsTime&&$('#b-when').value?new Date($('#b-when').value).getTime():null;
+    if(!name){err.textContent='Enter your name so the driver knows who to pick up.';$('#b-name').focus();return;}
+    if(!phone){err.textContent='Enter your mobile number so the driver can call you.';$('#b-phone').focus();return;}
+    if(!to){err.textContent='Enter where you are going.';return;}
+    if(from===to){err.textContent='Pickup and drop are the same place. Choose a different destination.';return;}
+    if(needsTime&&!when){err.textContent='Choose a pickup time.';$('#b-when').focus();return;}
+    if(when&&when<Date.now()-5*MIN){err.textContent='That time has already passed. Choose a later time.';return;}
+    if(k==='urgent'&&note.length<5){err.textContent='Write why it is urgent. The admin needs this to approve it.';$('#b-note').focus();return;}
+    LS.set('me',{name,emp,phone,dept});
+    const trip={passenger:name,empNo:emp,dept,phone,pax,from,to,kind:k,when,note,status:'approval',vehicleId:null,createdAt:Date.now(),createdBy:S.myId||null};
+    try{
+      const id=await act(store.addTrip(trip));
+      memMine.unshift(id);const mine=LS.get('mine',[]);mine.unshift(id);LS.set('mine',mine.slice(0,40));
+      $('#b-note').value='';$('#b-other').value='';
+      toast(k==='site'?'Added to the shared ride. The admin can see it now.':'Request sent to the admin.');
+      renderBook();
+    }catch(e2){}
+  });
+}
+
+/* ---------- forms: vehicle, settings, login ---------- */
+function initForms(){
+  $('#veh-form').addEventListener('submit',async e=>{
+    e.preventDefault();const err=$('#v-err');err.textContent='';
+    const p=$('#v-plate').value.trim().toUpperCase().replace(/\s+/g,' ');const id=p.replace(/[^A-Z0-9]/g,'');
+    if(id.length<4){err.textContent='Enter the full number plate, e.g. GJ 01 AB 1234.';return;}
+    if(S.vehicles.has(id)){err.textContent='This vehicle is already on the list.';return;}
+    const v={plate:p,type:$('#v-type').value,seats:Math.max(1,parseInt($('#v-seats').value,10)||4),driver:$("#vf-name").value.trim(),driverPhone:$('#v-dphone').value.trim(),at:$('#v-at').value,status:'available'};
+    try{await act(store.setVeh(id,v));$('#v-plate').value='';$("#vf-name").value="";$('#v-dphone').value='';toast(`${p} added.`);}catch(e2){}
+  });
+  $('#set-form').addEventListener('submit',async e=>{
+    e.preventDefault();const c=clone(S.cfg);
+    c.adminPhone=$('#s-phone').value.trim();c.minShared=Math.max(1,Math.min(12,parseInt($('#s-min').value,10)||4));
+    try{await act(store.setCfg(c));toast('Settings saved.');}catch(e2){}
+  });
+  $('#login-form').addEventListener('submit',async e=>{
+    e.preventDefault();const err=$('#l-err');err.textContent='';
+    if(!auth){err.textContent='Sign-in works once the site is connected to Firebase.';return;}
+    const email=$('#l-email').value.trim(),pass=$('#l-pass').value;
+    if(!email||!pass){err.textContent='Enter the admin email and password.';return;}
+    try{
+      await auth.signInWithEmailAndPassword(email,pass);
+      $('#l-pass').value='';
+      if(!ADMIN_EMAILS.includes(email.toLowerCase()))err.textContent='Signed in, but this email is not listed as admin in firebase-config.js.';
+    }catch(ex){
+      const c=ex&&ex.code||'';
+      err.textContent=/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c)?'Wrong email or password.'
+        :/operation-not-allowed/.test(c)?'Email/Password sign-in is not turned on in Firebase Authentication.'
+        :/too-many-requests/.test(c)?'Too many attempts. Wait a few minutes and try again.':'Could not sign in. Check the connection and try again.';
+    }
+  });
+}
+
+/* ---------- rendering ---------- */
+function safeSet(el,html){
+  const a=document.activeElement;
+  if(a&&el.contains(a)&&/^(SELECT|INPUT|TEXTAREA)$/.test(a.tagName)){el.dataset.stale='1';return;}
+  el.innerHTML=html;el.dataset.stale='';
+}
+document.addEventListener('focusout',e=>{setTimeout(()=>{const el=e.target.closest&&e.target.closest('[data-stale="1"]');if(el)renderTab();},0);});
+
+function fillMeter(n,min){
+  const ready=n>=min;let bars='';for(let i=0;i<Math.max(min,Math.min(n,12));i++)bars+=`<i class="${i<n?'on':''}"></i>`;
+  return `<div class="fill ${ready?'ready':''}"><span class="bar">${bars}</span><span><b>${n} of ${min}</b> people${ready?' · ready to send':''}</span></div>`;
+}
+function picker(g){
+  const {fit,small}=freeFor(g.from,g.pax);
+  const btn=v=>`<button data-act="assign" data-key="${esc(g.key)}" data-vid="${v.id}" data-write>${plate(v)}<span>${esc(v.driver||'Driver')} · ${esc(v.at||'?')}${v.at===g.from?' ✓':''} · ${v.seats} seats</span></button>`;
+  return `<div class="pick"><span class="hint">${fit.length?`Free vehicles with ${g.pax}+ seats, nearest first${S.assignUrgent?' · sending as urgent':''}:`:`No free vehicle has ${g.pax} seats right now.`}</span>${fit.map(btn).join('')}${!fit.length&&small.length?`<span class="hint">Smaller free vehicles:</span>${small.map(btn).join('')}`:''}${!fit.length&&!small.length?'<span class="hint">Every vehicle is busy. Wait for one to finish, or check Fleet &amp; setup.</span>':''}</div>`;
+}
+function groupCard(g){
+  const now=Date.now(),min=minShared();
+  const site=g.kind==='site',ready=!site||g.pax>=min;
+  const C=k=>S.confirm===k;
+  const timing=g.when?`<span>Pickup <b class="num">${fmtDT(g.when)}</b>${g.when>now?' · in '+dur(mins(g.when-now)):''}</span>`:`<span>As soon as possible · first request ${dur(mins(now-g.oldest))} ago</span>`;
+  const people=`<ul class="people">${g.trips.map(t=>`<li><b>${esc(t.passenger)}</b>${(+t.pax||1)>1?`<span>+${t.pax-1}</span>`:''}<span class="muted">${esc([t.empNo,t.dept].filter(Boolean).join(' · '))}</span>${t.phone?`<span class="mono">${esc(t.phone)}</span>`:''}<span class="muted">${fmtT(t.createdAt)}</span>${sampleTag(t)}${g.trips.length>1?`<button class="link-btn ${C('rej:'+t.id)?'armed':''}" data-act="reject" data-id="${t.id}" data-write>${C('rej:'+t.id)?'Confirm: not approved':'Not approved'}</button>`:''}${t.note?`<div class="note">${esc(t.note)}</div>`:''}</li>`).join('')}</ul>`;
+  let actions;
+  if(ready)actions=`<button class="btn primary" data-act="choose" data-key="${esc(g.key)}" data-write>${S.openAssign===g.key?'Close':g.kind==='urgent'?'Approve & assign vehicle':'Assign vehicle'}</button>`;
+  else actions=`<button class="btn danger ${C('urg:'+g.key)?'armed':''}" data-act="sendurgent" data-key="${esc(g.key)}" data-write>${C('urg:'+g.key)?`Confirm: send with only ${g.pax}`:'Send now as urgent'}</button>`;
+  actions+=`<button class="btn danger ${C('rejg:'+g.key)?'armed':''}" data-act="rejectgroup" data-key="${esc(g.key)}" data-write>${C('rejg:'+g.key)?'Confirm: not approved':g.trips.length>1?'Reject all':'Not approved'}</button>`;
+  return `<div class="trip ${g.kind==='urgent'||(site&&ready)?'urgent':''}">
+    <div class="trip-top"><div class="route-line">${esc(g.from)} <span class="arr">→</span> ${esc(g.to)}</div><span class="tag ${g.kind==='urgent'?'meeting':g.kind}">${KIND[g.kind]}</span></div>
+    <div class="meta">${timing}<span>${g.pax} ${g.pax>1?'people':'person'}</span></div>
+    ${site?fillMeter(g.pax,min):''}
+    ${people}
+    <div class="btn-row">${actions}</div>
+    ${S.openAssign===g.key?picker(g):''}
+  </div>`;
+}
+function movingCard(g,driverView){
+  const v=g.v,t0=g.trips[0],C=k=>S.confirm===k;
+  const people=`<ul class="people">${g.trips.map(t=>`<li><b>${esc(t.passenger)}</b>${(+t.pax||1)>1?`<span>+${t.pax-1}</span>`:''}<span class="muted">${esc(t.dept||'')}</span>${t.phone?`<span class="mono">${esc(t.phone)}</span>`:''}${sampleTag(t)}${t.note?`<div class="note">${esc(t.note)}</div>`:''}</li>`).join('')}</ul>`;
+  if(driverView){
+    return `<div class="job">
+      <div class="trip-top"><div class="who">${paxOf(g.trips)} ${paxOf(g.trips)>1?'people':'person'}</div><span class="tag ${t0.kind==='urgent'?'meeting':t0.kind}">${KIND[t0.kind]||''}</span></div>
+      <div class="big-route"><small>Pickup · यहाँ से लें</small>${esc(t0.from)}</div>
+      <div class="big-route"><small>Drop · यहाँ छोड़ें</small>${esc(t0.to)}</div>
+      <div class="meta">${g.when?`<span>Pickup time <b class="num">${fmtDT(g.when)}</b></span>`:'<span>Go now</span>'}</div>
+      ${people}
+      ${g.picked?`<button class="btn primary big" data-act="gdone" data-id="${esc(g.gid)}" data-write>Dropped at destination<small>सवारी छोड़ दी</small></button>`:`<button class="btn primary big" data-act="gpicked" data-id="${esc(g.gid)}" data-write>Passengers picked up<small>सवारी बैठ गई</small></button>`}
+    </div>`;
+  }
+  return `<div class="trip">
+    <div class="trip-top"><div class="btn-row" style="align-items:center">${plate(v)}<span>${esc(v?v.driver:'')}</span>${v&&v.driverPhone?`<span class="mono muted">${esc(v.driverPhone)}</span>`:''}</div>${pill(g.picked?'On board':'Going to pickup',g.picked?'acc':'warn')}</div>
+    <div class="route-line">${esc(t0.from)} <span class="arr">→</span> ${esc(t0.to)}</div>
+    <div class="meta"><span>${paxOf(g.trips)} people</span><span>Assigned ${fmtT(g.assignedAt)}</span>${g.when?`<span>Pickup ${fmtDT(g.when)}</span>`:''}${g.trips.some(t=>t.urgentOverride)?'<span class="tag meeting">Sent as urgent</span>':''}</div>
+    ${people}
+    <div class="btn-row">${v?`<a class="btn wa" href="${waLink(v.driverPhone,driverMsg(v,g.trips))}" target="_blank" rel="noopener">WhatsApp driver</a>`:''}${g.picked?`<button class="btn" data-act="gdone" data-id="${esc(g.gid)}" data-write>Mark dropped</button>`:`<button class="btn" data-act="gpicked" data-id="${esc(g.gid)}" data-write>Mark picked up</button><button class="btn danger ${C('unas:'+g.gid)?'armed':''}" data-act="unassign" data-id="${esc(g.gid)}" data-write>${C('unas:'+g.gid)?'Confirm unassign':'Unassign'}</button>`}</div>
+  </div>`;
+}
+
+function rideCard(t){
+  const now=Date.now(),v=vehOf(t),C=k=>S.confirm===k,min=minShared();
+  let info='';
+  if(t.status==='approval'){
+    if(t.kind==='site'){const g=findGroup(pendKey(t));const n=g?g.pax:(+t.pax||1);info=`${fillMeter(n,min)}<div class="meta"><span>${n>=min?'Group is full. The admin will send a vehicle shortly.':`Waiting for ${min-n} more ${min-n>1?'people':'person'} on this route, or the admin's decision.`}</span></div>`;}
+    else info=`<div class="meta"><span>Sent ${dur(mins(now-t.createdAt))} ago. Waiting for the admin's decision.</span></div>`;
+    if(t.kind==='urgent'&&S.cfg.adminPhone)info+=`<div class="btn-row"><a class="btn wa" href="${waLink(S.cfg.adminPhone,adminMsg(t))}" target="_blank" rel="noopener">Message admin on WhatsApp</a></div>`;
+  }else if(t.status==='assigned'&&v){info=`<div class="meta">${plate(v)}<span>${esc(v.driver||'')}</span>${v.driverPhone?`<span class="mono">${esc(v.driverPhone)}</span>`:''}</div><div class="meta"><span>Be at <b>${esc(t.from)}</b>${t.when?' by '+fmtT(t.when):' now'}. The driver is on the way.</span></div>`;}
+  else if(t.status==='picked')info=`<div class="meta">${plate(v)}<span>On the way to ${esc(t.to)}</span></div>`;
+  else if(t.status==='done')info=`<div class="meta"><span>Dropped ${fmtT(t.doneAt)}</span></div>`;
+  else if(t.status==='rejected')info=`<div class="meta"><span>The admin did not approve this request. Call the transport desk if you still need a vehicle.</span></div>`;
+  const cancel=['approval','assigned'].includes(t.status)?`<div class="btn-row"><button class="btn danger ${C('cancel:'+t.id)?'armed':''}" data-act="cancel" data-id="${t.id}" data-write>${C('cancel:'+t.id)?'Confirm cancel':'Cancel request'}</button></div>`:'';
+  return `<div class="trip"><div class="trip-top"><div class="route-line">${esc(t.from)} <span class="arr">→</span> ${esc(t.to)}</div><div class="btn-row" style="gap:6px"><span class="tag ${t.kind==='urgent'?'meeting':t.kind}">${KIND[t.kind]||''}</span>${pill(st(t)[0],st(t)[1])}</div></div>
+    <div class="meta"><span>${esc(t.passenger)}${(+t.pax||1)>1?' +'+(t.pax-1):''}</span>${t.when?`<span>Pickup ${fmtDT(t.when)}</span>`:''}</div>${info}${cancel}</div>`;
+}
+function renderBook(){
+  const mine=new Set([...memMine,...LS.get('mine',[])]);const d0=dayStart();
+  const list=allTrips().filter(t=>(S.myId&&t.createdBy===S.myId)||mine.has(t.id))
+    .filter(t=>['approval','assigned','picked'].includes(t.status)||t.createdAt>=d0||(t.when&&t.when>=d0))
+    .sort((a,b)=>b.createdAt-a.createdAt).slice(0,8);
+  safeSet($('#my-rides'),list.length?list.map(rideCard).join(''):`<div class="empty">No rides yet. Your requests from this phone show here with the vehicle number and driver once the admin assigns one.</div>`);
+}
+
+function renderDispatch(){
+  const now=Date.now(),min=minShared();
+  $('#d-alertbar').className='alertbar'+(Alerts.on?' on':'');$('#d-alertbar').innerHTML=Alerts.bar();
+  if(S.notice){
+    const v=S.vehicles.get(S.notice.vid),ts=S.notice.ids.map(i=>S.trips.get(i)).filter(Boolean);
+    $('#d-notice').innerHTML=v&&ts.length?`<div class="notice"><div class="panel-h"><h3>${esc(v.plate)} assigned · now tell the driver</h3><button class="btn" data-act="closenotice">Done</button></div>
+      <div class="meta"><span>${esc(ts[0].from)} → ${esc(ts[0].to)}</span><span>${paxOf(ts)} people</span><span>${esc(v.driver||'')}</span>${v.driverPhone?`<span class="mono">${esc(v.driverPhone)}</span>`:'<span>No driver mobile saved, so WhatsApp will ask you to pick the contact.</span>'}</div>
+      <div class="btn-row"><a class="btn wa" href="${waLink(v.driverPhone,driverMsg(v,ts))}" target="_blank" rel="noopener">Send trip to driver on WhatsApp</a></div></div>`:'';
+  }else $('#d-notice').innerHTML='';
+  const vs=[...S.vehicles.values()];
+  const free=vs.filter(v=>vState(v)==='free').length,busy=vs.filter(v=>vState(v)==='busy').length;
+  const shared=pendingGroups('site'),urg=pendingGroups('urgent'),outs=pendingGroups('outstation');
+  const readyN=shared.filter(g=>g.pax>=min).length;
+  const waitingPeople=paxOf(tripsBy('approval').filter(t=>t.kind!=='outstation'));
+  $('#d-kpis').innerHTML=[
+    ['People waiting',waitingPeople,`${shared.length} shared groups`,false],
+    ['Ready to send',readyN+urg.length,`${readyN} full groups · ${urg.length} urgent`,readyN+urg.length>0],
+    ['Free vehicles',`${free}<small style="font-size:16px"> / ${vs.length}</small>`,`${busy} on trip`,free===0&&readyN+urg.length>0],
+    ['Going home',outs.reduce((s,g)=>s+g.trips.length,0),'Requests to approve',false]
+  ].map(([l,v,s,al])=>`<div class="kpi ${al?'alert':''}"><span>${l}</span><b>${v}</b><small>${s}</small></div>`).join('');
+  $('#d-shared-sub').textContent=`Requests grouped by route. Send a vehicle once ${min} people are going.`;
+  shared.sort((a,b)=>((b.pax>=min)-(a.pax>=min))||((a.when||a.oldest)-(b.when||b.oldest)));
+  safeSet($('#d-shared'),shared.length?shared.map(groupCard).join(''):`<div class="empty">No shared-ride requests. They appear here, grouped by route, as staff book.</div>`);
+  urg.sort((a,b)=>(a.when||a.oldest)-(b.when||b.oldest));
+  safeSet($('#d-urgent'),urg.length?urg.map(groupCard).join(''):`<div class="empty">No urgent requests.</div>`);
+  outs.sort((a,b)=>(a.when||0)-(b.when||0));
+  safeSet($('#d-outs'),outs.length?outs.map(groupCard).join(''):`<div class="empty">No going-home requests.</div>`);
+  const mv=activeGroups();
+  safeSet($('#d-moving'),mv.length?mv.map(g=>movingCard(g,false)).join(''):`<div class="empty">No vehicles on a trip.</div>`);
+  const stops=S.cfg.stops,freeAt=s=>vs.filter(v=>vState(v)==='free'&&v.at===s);
+  $('#d-route').innerHTML=`<div class="route">${stops.map(s=>{const f=freeAt(s);return `<div class="stn ${f.length?'has':''}"><span class="dot"></span><h3>${esc(s)}</h3><div class="vs">${f.length?f.map(plate).join(''):'<span class="none">No free vehicle</span>'}</div></div>`;}).join('')}</div>`;
+  const grp=(l,arr)=>arr.length?`<div><span class="lbl">${l}</span>${arr.map(plate).join('')}</div>`:'';
+  $('#d-side').innerHTML=(grp('On trip',vs.filter(v=>vState(v)==='busy'))+grp('Free · elsewhere',vs.filter(v=>vState(v)==='free'&&!stops.includes(v.at)))+grp('On break',vs.filter(v=>vState(v)==='break'))+grp('Off duty',vs.filter(v=>vState(v)==='off')))||'<span class="muted">No vehicles added yet. Add them under Fleet &amp; setup.</span>';
+}
+
+function renderDriver(){
+  $('#drv-alertbar').className='alertbar'+(Alerts.on?' on':'');
+  $('#drv-alertbar').innerHTML=Alerts.on?'<span><b>Alerts on.</b> This phone rings when a trip is assigned to your vehicle.</span>':'<span>Turn on alerts so this phone rings when the admin gives you a trip.</span><button class="btn primary" data-act="alerts">Turn on alerts</button>';
+  const sel=$('#drv-veh');const vs=[...S.vehicles.values()].sort((a,b)=>a.plate.localeCompare(b.plate));
+  fillSelect(sel,[['','Choose vehicle…'],...vs.map(v=>[v.id,`${v.plate} · ${v.driver||v.type}`])],sel.value||LS.get('drv',''));
+  const v=S.vehicles.get(sel.value),body=$('#drv-body');
+  if(!v){safeSet(body,`<div class="empty">${vs.length?'Choose your vehicle above to see your trips.':'No vehicles yet. The admin adds them under Fleet &amp; setup.'}</div>`);return;}
+  const s=vState(v),jobs=activeGroups(v.id);
+  const statusBtns=[['available','Available · खाली'],['break','Break · ब्रेक'],['off','Off duty · छुट्टी']].map(([k,l])=>`<button class="chip" aria-pressed="${(v.status||'available')===k}" data-act="vstatus" data-vid="${v.id}" data-st="${k}" data-write>${l}</button>`).join('');
+  const atBtns=S.cfg.stops.map(x=>`<button class="chip" aria-pressed="${v.at===x}" data-act="vat" data-vid="${v.id}" data-at="${esc(x)}" data-write>${esc(x)}</button>`).join('');
+  safeSet(body,`<div class="drv-head">${plate(v)}<div><b>${esc(v.driver||'')}</b><div class="muted">${esc(v.type)} · ${v.seats} seats · ${doneToday(v.id)} trips today</div></div>${pill(VSTATE[s][0],VSTATE[s][1])}${sampleTag(v)}</div>
+    <div class="field"><span>My status</span><div class="chips">${statusBtns}</div></div>
+    <div class="field"><span>I am at · मैं यहाँ हूँ</span><div class="chips">${atBtns}</div></div>
+    <h3>Current trips</h3>${jobs.length?jobs.map(g=>movingCard(g,true)).join(''):'<div class="empty">No trip assigned. Stay at your pickup point. New trips appear here and the phone rings if alerts are on.</div>'}`);
+}
+
+function rangeSince(){const now=Date.now();return S.range==='today'?dayStart():S.range==='7d'?now-7*DAY:S.range==='30d'?now-30*DAY:0;}
+function rangeTrips(){const s=rangeSince();return allTrips().filter(t=>(t.createdAt||0)>=s);}
+const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
+function renderRecords(){
+  document.querySelectorAll('#r-range .chip').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.range===S.range)));
+  const ts=rangeTrips(),done=ts.filter(t=>t.status==='done');
+  const vtrips=new Map();done.forEach(t=>{const k=t.groupId||t.id;if(!vtrips.has(k))vtrips.set(k,[]);vtrips.get(k).push(t);});
+  const groups=[...vtrips.values()];
+  const people=paxOf(done),occ=groups.length?people/groups.length:0;
+  const single=groups.filter(g=>g.some(t=>t.kind==='urgent'||t.urgentOverride)).length;
+  const waits=ts.filter(t=>t.pickedAt&&t.kind!=='outstation').map(t=>mins(t.pickedAt-waitStart(t)));
+  const outs=ts.filter(t=>t.kind==='outstation'&&!['rejected','cancelled'].includes(t.status)).length;
+  const rej=ts.filter(t=>t.status==='rejected').length;
+  $('#r-kpis').innerHTML=[
+    ['Vehicle trips',groups.length,`${people} people moved`],
+    ['People per vehicle',groups.length?occ.toFixed(1):'–','Average load per trip'],
+    ['Average wait',waits.length?Math.round(avg(waits))+'<small style="font-size:16px"> min</small>':'–','Request to pickup'],
+    ['Urgent single trips',single,'Sent below the minimum'],
+    ['Going-home trips',outs,'Airport and station'],
+    ['Not approved',rej,'Rejected by admin']
+  ].map(([l,v,s])=>`<div class="kpi"><span>${l}</span><b>${v}</b><small>${s}</small></div>`).join('');
+  const counts=Array(24).fill(0);ts.forEach(t=>{counts[new Date(t.createdAt).getHours()]++;});
+  const hrs=[];for(let h=5;h<=23;h++)hrs.push(h);
+  const max=Math.max(1,...hrs.map(h=>counts[h]));const nice=max<=4?4:Math.ceil(max/4)*4;
+  const W=760,H=210,L=34,R=8,T=12,B=28,cw=(W-L-R)/hrs.length,bw=cw*0.62,y=v=>T+(H-T-B)*(1-v/nice),curH=new Date().getHours();
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Requests by hour of day">`;
+  for(let i=0;i<=4;i++){const v=nice*i/4,yy=y(v);svg+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}"/><text x="${L-6}" y="${yy+4}" text-anchor="end">${v}</text>`;}
+  hrs.forEach((h,i)=>{const x=L+i*cw+(cw-bw)/2,c=counts[h];if(c)svg+=`<rect class="bar ${S.range==='today'&&h===curH?'now':''}" x="${x}" y="${y(c)}" width="${bw}" height="${y(0)-y(c)}" rx="2"><title>${String(h).padStart(2,'0')}:00 · ${c} requests</title></rect>`;if(i%2===0)svg+=`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle">${String(h).padStart(2,'0')}</text>`;});
+  $('#r-hours').innerHTML=ts.length?svg+'</svg>':'<div class="empty">No requests in this period.</div>';
+  const rm=new Map();ts.filter(t=>!['cancelled','rejected'].includes(t.status)).forEach(t=>{const k=t.from+' → '+t.to;const r=rm.get(k)||{n:0,w:[]};r.n+=(+t.pax||1);if(t.pickedAt)r.w.push(mins(t.pickedAt-waitStart(t)));rm.set(k,r);});
+  const routes=[...rm.entries()].sort((a,b)=>b[1].n-a[1].n).slice(0,8),rmax=Math.max(1,...routes.map(r=>r[1].n));
+  $('#r-routes').innerHTML=routes.length?`<div class="tbl-wrap"><table><thead><tr><th>Route</th><th>People</th><th class="r">Avg wait</th></tr></thead><tbody>${routes.map(([k,r])=>`<tr><td>${esc(k)}</td><td><div class="bar-cell"><i style="width:${Math.round(r.n/rmax*90)}px"></i><span class="num">${r.n}</span></div></td><td class="r num">${r.w.length?Math.round(avg(r.w))+' min':'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No trips yet.</div>';
+  const dm=new Map();ts.filter(t=>!['cancelled','rejected'].includes(t.status)).forEach(t=>{const k=t.dept||'Not given';const r=dm.get(k)||{n:0,o:0,u:0,p:new Set()};r.n++;if(t.kind==='outstation')r.o++;if(t.kind==='urgent'||t.urgentOverride)r.u++;r.p.add((t.empNo||t.passenger||'').toLowerCase());dm.set(k,r);});
+  const depts=[...dm.entries()].sort((a,b)=>b[1].n-a[1].n),dmax=Math.max(1,...depts.map(d=>d[1].n));
+  $('#r-dept').innerHTML=depts.length?`<div class="tbl-wrap"><table><thead><tr><th>Department</th><th>Requests</th><th class="r">People</th><th class="r">Urgent</th><th class="r">Going home</th></tr></thead><tbody>${depts.map(([k,r])=>`<tr><td>${esc(k)}</td><td><div class="bar-cell"><i style="width:${Math.round(r.n/dmax*90)}px"></i><span class="num">${r.n}</span></div></td><td class="r num">${r.p.size}</td><td class="r num">${r.u}</td><td class="r num">${r.o}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No trips yet.</div>';
+  const vrows=[...S.vehicles.values()].map(v=>{const g=groups.filter(gr=>gr[0].vehicleId===v.id);const m=g.reduce((s,gr)=>s+mins((gr[0].doneAt||0)-(gr[0].assignedAt||gr[0].doneAt||0)),0);return {v,n:g.length,p:g.reduce((s,gr)=>s+paxOf(gr),0),m};}).sort((a,b)=>b.n-a.n);
+  const vmax=Math.max(1,...vrows.map(r=>r.n));
+  $('#r-veh').innerHTML=vrows.length?`<div class="tbl-wrap"><table><thead><tr><th>Vehicle</th><th>Driver</th><th>Type</th><th>Trips</th><th class="r">People</th><th class="r">Time on trips</th></tr></thead><tbody>${vrows.map(r=>`<tr><td>${plate(r.v)}</td><td>${esc(r.v.driver||'')}</td><td>${esc(r.v.type)}</td><td><div class="bar-cell"><i style="width:${Math.round(r.n/vmax*90)}px"></i><span class="num">${r.n}</span></div></td><td class="r num">${r.p}</td><td class="r num">${r.m?dur(r.m):'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No vehicles yet.</div>';
+  renderLog();
+}
+function renderLog(){
+  const q=S.logQ.toLowerCase();
+  const rows=rangeTrips().filter(t=>{if(!q)return true;const v=vehOf(t);return [t.passenger,t.empNo,t.dept,t.from,t.to,v&&v.plate,v&&v.driver].join(' ').toLowerCase().includes(q);}).sort((a,b)=>b.createdAt-a.createdAt);
+  const shown=rows.slice(0,300);
+  $('#r-log').innerHTML=rows.length?`<div class="tbl-wrap tall"><table><thead><tr><th>Requested</th><th>Passenger</th><th>Emp no.</th><th>Dept</th><th>From → To</th><th>Type</th><th>Vehicle</th><th class="r">Wait</th><th>Status</th></tr></thead><tbody>${shown.map(t=>{const v=vehOf(t);return `<tr><td class="num">${fmtD(t.createdAt)} ${fmtT(t.createdAt)}</td><td>${esc(t.passenger)}${(+t.pax||1)>1?' +'+(t.pax-1):''}</td><td class="mono">${esc(t.empNo||'')}</td><td>${esc(t.dept||'')}</td><td>${esc(t.from)} → ${esc(t.to)}</td><td>${KIND[t.kind]||''}${t.urgentOverride?' (urgent)':''}</td><td>${v?plate(v):''}</td><td class="r num">${t.pickedAt?mins(t.pickedAt-waitStart(t))+' min':''}</td><td>${pill(st(t)[0],st(t)[1])}</td></tr>`;}).join('')}</tbody></table></div>${rows.length>shown.length?`<p class="muted">Showing the latest 300 of ${rows.length}. Export to see all.</p>`:''}`:'<div class="empty">No trips match.</div>';
+}
+function buildCsv(){
+  const cols=['Requested at','Passenger','Emp no','Department','Mobile','People','From','To','Type','Sent as urgent','Pickup time asked','Vehicle','Driver','Status','Assigned at','Picked up at','Dropped at','Wait (min)','Note'];
+  const iso=ms=>ms?new Date(ms).toLocaleString('en-IN',{hour12:false}):'';
+  const cell=x=>{const s=String(x==null?'':x);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const rows=rangeTrips().sort((a,b)=>a.createdAt-b.createdAt).map(t=>{const v=vehOf(t);return [iso(t.createdAt),t.passenger,t.empNo,t.dept,t.phone,t.pax,t.from,t.to,KIND[t.kind],t.urgentOverride?'Yes':'',iso(t.when),v?v.plate:'',v?v.driver:'',st(t)[0],iso(t.assignedAt),iso(t.pickedAt),iso(t.doneAt),t.pickedAt?mins(t.pickedAt-waitStart(t)):'',t.note];});
+  return [cols,...rows].map(r=>r.map(cell).join(',')).join('\n');
+}
+function exportCsv(){
+  const csv='﻿'+buildCsv(),name=`site-transport-trips-${S.range}-${new Date().toISOString().slice(0,10)}.csv`;
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);toast('Trip log downloaded. Open it in Excel.');
+}
+
+function renderFleet(){
+  const vs=[...S.vehicles.values()].sort((a,b)=>a.plate.localeCompare(b.plate));
+  safeSet($('#f-veh'),vs.length?`<div class="tbl-wrap"><table><thead><tr><th>Vehicle</th><th>Type</th><th class="r">Seats</th><th>Driver</th><th>Driver WhatsApp</th><th>Now</th><th>Parked at</th><th>Trips today</th><th></th></tr></thead><tbody>${vs.map(v=>{const s=vState(v),armed=S.confirm==='vdel:'+v.id;return `<tr><td>${plate(v)}${sampleTag(v)}</td><td>${esc(v.type)}</td><td class="r num">${v.seats}</td><td>${esc(v.driver||'')}</td><td><div class="add-row" style="min-width:210px"><input id="vp-${v.id}" value="${esc(v.driverPhone||'')}" placeholder="98XXXXXXXX" inputmode="tel"><button class="btn" data-act="vphone" data-vid="${v.id}" data-write>Save</button></div></td><td>${pill(VSTATE[s][0],VSTATE[s][1])}</td><td>${esc(v.at||'')}</td><td class="num">${doneToday(v.id)}</td><td><button class="btn danger ${armed?'armed':''}" data-act="vdel" data-vid="${v.id}" data-write>${armed?'Confirm remove':'Remove'}</button></td></tr>`;}).join('')}</tbody></table></div>`:`<div class="empty">No vehicles yet. Add the first one below.</div>`);
+  fillSelect($('#v-at'),S.cfg.stops);
+  if(document.activeElement!==$('#s-phone'))$('#s-phone').value=S.cfg.adminPhone||'';
+  if(document.activeElement!==$('#s-min'))$('#s-min').value=minShared();
+  const chips=k=>S.cfg[k].map(s=>`<span>${esc(s)}<button data-act="delplace" data-key2="${k}" data-name="${esc(s)}" aria-label="Remove ${esc(s)}" data-write>×</button></span>`).join('');
+  $('#f-stops').innerHTML=chips('stops');$('#f-outs').innerHTML=chips('outstation');
+  const base=pageUrl();
+  $('#f-links').innerHTML=[['Admin phone (dispatch)','dispatch'],['Drivers','driver'],['Management records','records'],...S.cfg.stops.map(s=>[`Poster at ${s}`,'from-'+slug(s)])].map(([a,h])=>`<tr><td>${esc(a)}</td><td><code>${esc(base)}#${h}</code></td></tr>`).join('');
+  const hasSample=allTrips().some(t=>t.sample)||vs.some(v=>v.sample);
+  $('#btn-clear-sample').hidden=!hasSample;$('#btn-load-sample').hidden=hasSample||S.mode!=='live';
+  const cb=$('#btn-clear-sample');cb.classList.toggle('armed',S.confirm==='clearsample');cb.textContent=S.confirm==='clearsample'?'Confirm: remove all sample data':'Remove sample data';
+}
+
+function gated(t){return ADMIN_TABS.includes(t)&&S.mode==='live'&&!S.isAdmin;}
+function renderTab(){
+  const t=S.tab,g=gated(t);
+  TABS.forEach(x=>{$('#v-'+x).hidden=x!==t||g;});
+  $('#v-login').hidden=!g;
+  if(g){$('#login-title').textContent='Admin sign-in';return;}
+  ({book:renderBook,dispatch:renderDispatch,driver:renderDriver,records:renderRecords,fleet:renderFleet})[t]();
+  applyWriteState();
+}
+function renderAll(){
+  const m=$('#mode');
+  m.className='mode '+(S.mode==='live'?'live':S.mode==='demo'?'demo':'');
+  m.textContent=S.mode==='live'?'Live · shared':S.mode==='demo'?'Demo · not saved':'Connecting…';
+  $('#admin-chip').hidden=!(S.mode==='live'&&S.isAdmin);
+  const ban=$('#banner');
+  if(S.mode==='demo'){ban.hidden=false;ban.innerHTML=S.demoReason==='error'?'<b>Could not connect to the database.</b> Showing example data; changes are not saved. Check <code>firebase-config.js</code> and that Anonymous sign-in is on in Firebase.':'<b>Demo mode.</b> The database is not connected, so this shows example data and changes are not saved.';}
+  else if(S.connErr){ban.hidden=false;ban.innerHTML='<b>Database refused access.</b> Publish the Firestore rules from the README, then reload.';}
+  else ban.hidden=true;
+  const n=(S.mode==='demo'||S.isAdmin)?tripsBy('approval').length:0;
+  $('#cnt-dispatch').textContent=n?String(n):'';
+  document.title=(n?`(${n}) `:'')+'Dholera Site Transport';
+  syncBookForm();
+  renderTab();
+}
+function applyWriteState(){document.querySelectorAll('[data-write]').forEach(b=>{b.disabled=!S.canWrite;});}
+function setTab(t,fromHash){
+  if(!TABS.includes(t))t='book';
+  S.tab=t;S.openAssign=null;S.confirm=null;
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));
+  ensureScope(t);renderTab();
+  if(!fromHash){try{window.scrollTo({top:0});}catch(e){}}
+}
+function readHash(){
+  const h=(location.hash||'').slice(1);
+  if(h.startsWith('from-')){const s=S.cfg.stops.find(x=>'from-'+slug(x)===h);setTab('book',true);if(s){$('#b-from').value=s;syncBookForm();}return;}
+  if(TABS.includes(h))setTab(h,true);
+}
+
+/* ---------- data subscriptions ---------- */
+const SRC={},subs={};let seen=null;
+function mergeTrips(){
+  const m=new Map();for(const k of ['hist','today','active','mine'])if(SRC[k])SRC[k].forEach((t,id)=>m.set(id,t));
+  S.trips=m;detectNew();renderAll();
+}
+function detectNew(){
+  const cur=new Map();S.trips.forEach(t=>{if(['approval','assigned'].includes(t.status))cur.set(t.id,t);});
+  if(seen===null){if(SRC.active){seen=new Set([...cur.values()].map(t=>t.id+':'+t.status));}return;}
+  const drv=$('#drv-veh').value;
+  cur.forEach(t=>{const k=t.id+':'+t.status;if(seen.has(k))return;seen.add(k);
+    if(t.status==='approval'&&S.isAdmin)Alerts.notify(t.kind==='urgent'?'Urgent vehicle request':'New vehicle request',`${t.passenger}${(+t.pax||1)>1?' +'+(t.pax-1):''}: ${t.from} → ${t.to}${t.when?' at '+fmtT(t.when):''}`,'dispatch');
+    if(t.status==='assigned'&&drv&&t.vehicleId===drv&&S.tab==='driver')Alerts.notify('New trip for you',`Pickup ${t.from} → ${t.to}`,'driver');
+  });
+}
+function listen(key,query){
+  if(subs[key])return;
+  subs[key]=query.onSnapshot(snap=>{SRC[key]=new Map(snap.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id})]));mergeTrips();},onDbErr);
+}
+function stop(key){if(subs[key]){subs[key]();delete subs[key];delete SRC[key];}}
+function onDbErr(e){console.error(e);if(e&&e.code==='permission-denied'&&auth&&auth.currentUser){S.connErr=true;renderAll();}}
+function ensureScope(tab){
+  if(!db||!S.myId)return;
+  listen('active',db.collection('trips').where('status','in',['approval','assigned','picked']));
+  if(tab==='book')listen('mine',db.collection('trips').where('createdBy','==',S.myId));
+  else listen('today',db.collection('trips').where('createdAt','>=',dayStart()));
+  if(tab==='records'&&S.isAdmin)loadHist();
+}
+let histKey='',histAt=0;
+async function loadHist(){
+  if(!db||!S.isAdmin)return;const now=Date.now();
+  if(histKey===S.range&&now-histAt<120000)return;histKey=S.range;histAt=now;
+  try{const snap=await db.collection('trips').where('createdAt','>=',rangeSince()).orderBy('createdAt','desc').limit(5000).get();
+    SRC.hist=new Map(snap.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id})]));mergeTrips();}catch(e){onDbErr(e);}
+}
+let baseSubs=[];
+function startBase(){
+  baseSubs.forEach(u=>u());baseSubs=[];
+  baseSubs.push(db.collection('vehicles').onSnapshot(snap=>{S.vehicles=new Map(snap.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id})]));renderAll();},onDbErr));
+  baseSubs.push(db.doc('config/site').onSnapshot(s=>{
+    const d=s.exists?s.data():{};
+    S.cfg={stops:Array.isArray(d.stops)&&d.stops.length?d.stops.slice():DEFAULT_CFG.stops.slice(),outstation:Array.isArray(d.outstation)&&d.outstation.length?d.outstation.slice():DEFAULT_CFG.outstation.slice(),minShared:+d.minShared||4,adminPhone:d.adminPhone||''};
+    renderAll();
+  },onDbErr));
+}
+
+/* ---------- boot ---------- */
+function startDemo(reason){
+  const d=sampleData(Date.now());
+  S.vehicles=new Map(d.vehicles.map(v=>[v.id,v]));S.trips=new Map(d.trips.map(t=>[t.id,t]));
+  S.mode='demo';S.demoReason=reason||'setup';S.isAdmin=true;renderAll();readHash();
+}
+async function boot(){
+  initBookForm();initForms();
+  $('#drv-veh').addEventListener('change',e=>{LS.set('drv',e.target.value);renderDriver();});
+  $('#r-q').addEventListener('input',e=>{S.logQ=e.target.value;renderLog();});
+  window.addEventListener('hashchange',readHash);
+  const tick=()=>{$('#clock').textContent=fmtT(Date.now());};tick();
+  setInterval(()=>{tick();if(S.mode!=='loading'&&['book','dispatch','driver'].includes(S.tab))renderAll();},20000);
+  renderAll();readHash();
+  const cfg=window.FIREBASE_CONFIG;
+  if(!window.firebase||!cfg||!cfg.apiKey||/PASTE/i.test(cfg.apiKey)){startDemo('setup');return;}
+  try{
+    firebase.initializeApp(cfg);
+    auth=firebase.auth();db=firebase.firestore();
+    try{db.settings({ignoreUndefinedProperties:true,merge:true});}catch(e){}
+    auth.onAuthStateChanged(async user=>{
+      if(!user){try{await auth.signInAnonymously();}catch(e){console.error(e);startDemo('error');}return;}
+      const changed=S.myId!==user.uid;
+      S.myId=user.uid;
+      S.isAdmin=!user.isAnonymous&&ADMIN_EMAILS.includes(String(user.email||'').toLowerCase());
+      S.mode='live';
+      if(changed){['active','today','mine','hist'].forEach(stop);histKey='';seen=null;S.connErr=false;startBase();}
+      ensureScope(S.tab);renderAll();readHash();
+    });
+  }catch(e){console.error(e);startDemo('error');}
+}
+boot();
+})();
+</script>
+</body>
+</html>
