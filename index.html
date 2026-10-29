@@ -1,0 +1,1317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B2A4A">
+<meta name="description" content="Staff vehicle booking for the TSMPL Dholera FAB site. L&T staff book a car, the immediate supervisor approves long-distance rides, and km is tracked from the speedometer.">
+<title>Dholera Site Transport</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: dark teal header with role tabs. "Ride" is the staff home: booking card on the left, current ride and history on the right. */
+:root{
+  --bg:#EEF3F7;--surface:#FFFFFF;--surface-2:#F5F8FB;--ink:#0F1E2E;--ink-2:#56657A;--line:#DCE5EC;
+  --accent:#0E7C86;--accent-ink:#FFFFFF;--accent-soft:#DDF3F4;--signal:#EA580C;--signal-soft:#FFEDDD;
+  --ok:#15803D;--ok-soft:#DCF5E4;--warn:#B45309;--warn-soft:#FDF0D5;--bad:#B42318;--bad-soft:#FDE4E1;--idle:#5B6B7D;--idle-soft:#E6ECF2;
+  --gold:#F5B301;--navy:#0B2A4A;--teal-deep:#0E5A6B;--wa:#17934A;
+  --plate-bg:#FFFFFF;--plate-ink:#111111;--plate-edge:#1B1B1B;--plate-band:#1D4FBF;
+  --shadow:0 1px 2px rgba(15,30,46,.05),0 12px 30px -20px rgba(15,30,46,.28);
+  --font-display:"Outfit","Segoe UI",system-ui,Arial,sans-serif;
+  --font-body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:14px;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1219;--surface:#121C27;--surface-2:#182432;--ink:#E6EEF5;--ink-2:#9BABBC;--line:#263545;
+  --accent:#2EC4CC;--accent-ink:#04201F;--accent-soft:#12363A;--signal:#FB923C;--signal-soft:#3A2414;
+  --ok:#4ADE80;--ok-soft:#133222;--warn:#FBBF24;--warn-soft:#342810;--bad:#F87171;--bad-soft:#3A1A1A;--idle:#A2B1C2;--idle-soft:#202C3A;
+  --wa:#25B561;--plate-bg:#ECEFEE;--plate-band:#2B5BC7;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px -22px rgba(0,0,0,.8);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1219;--surface:#121C27;--surface-2:#182432;--ink:#E6EEF5;--ink-2:#9BABBC;--line:#263545;
+  --accent:#2EC4CC;--accent-ink:#04201F;--accent-soft:#12363A;--signal:#FB923C;--signal-soft:#3A2414;
+  --ok:#4ADE80;--ok-soft:#133222;--warn:#FBBF24;--warn-soft:#342810;--bad:#F87171;--bad-soft:#3A1A1A;--idle:#A2B1C2;--idle-soft:#202C3A;
+  --wa:#25B561;--plate-bg:#ECEFEE;--plate-band:#2B5BC7;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px -22px rgba(0,0,0,.8);color-scheme:dark}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{margin:0;background:radial-gradient(1100px 520px at 88% -160px,rgba(14,124,134,.18),transparent 70%),var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;min-height:100vh;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--navy)}
+[hidden]{display:none!important}
+h1,h2,h3{font-family:var(--font-display);font-weight:650;margin:0;letter-spacing:-.005em;text-wrap:balance}
+h2{font-size:21px;line-height:1.15}h3{font-size:17px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+.num,.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-2)}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:linear-gradient(118deg,var(--navy) 0%,var(--teal-deep) 58%,#0F8C93 100%);color:#F4FAFC;box-shadow:0 10px 30px -18px rgba(11,42,74,.7)}
+.top .wrap{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding-top:12px}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1 1 200px}
+.brand h1{font-size:24px;line-height:1.05;color:#fff;font-weight:700}
+.brand h1 i{font-style:normal;color:var(--gold)}
+.brand small{color:rgba(255,255,255,.72);font-size:12.5px;margin-top:3px}
+.status-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.who{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.9);min-width:0}
+.who b{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.role{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--gold);color:var(--navy);padding:1px 7px;border-radius:999px}
+.link-btn{appearance:none;border:0;background:none;padding:0;color:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.net{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.14);color:#EAF6F8;white-space:nowrap}
+.net.on{background:rgba(74,222,128,.22);color:#C9FBDC}
+.net.off{background:rgba(251,146,60,.3);color:#FFE3CC}
+.clock{font-family:var(--font-mono);font-size:15px;font-weight:600;color:#fff}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;width:100%;margin-top:8px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:none;padding:11px 15px 10px;font-family:var(--font-display);font-size:15.5px;font-weight:600;color:rgba(255,255,255,.76);cursor:pointer;white-space:nowrap;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:7px}
+.tab:hover{color:#fff;background:rgba(255,255,255,.09)}
+.tab[aria-selected="true"]{color:var(--ink);background:var(--bg)}
+.tab .count{font-family:var(--font-mono);font-size:11px;background:var(--gold);color:var(--navy);border-radius:999px;padding:1px 6px;font-weight:700}
+
+main.wrap{padding-top:20px;padding-bottom:60px;display:flex;flex-direction:column;gap:18px}
+section{animation:rise .35s cubic-bezier(.2,.7,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){section{animation:none}}
+.banner{padding:11px 15px;border-radius:var(--r);background:var(--warn-soft);color:var(--ink);font-size:13.5px}
+.banner b{color:var(--warn)}
+.banner.off{background:var(--signal-soft)}
+
+/* panels */
+.panel{background:var(--surface);border:1px solid rgba(15,30,46,.06);border-radius:18px;padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;min-width:0}
+:root:not([data-theme="light"]) .panel{border-color:var(--line)}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.panel-h p{margin:4px 0 0;font-size:13.5px;color:var(--ink-2)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px;align-items:start}
+.empty{padding:22px;border:1.5px dashed var(--line);border-radius:14px;background:var(--surface-2);color:var(--ink-2);font-size:14px;text-align:center}
+.list{display:flex;flex-direction:column;gap:10px}
+.ride-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+@media (min-width:900px){.ride-grid{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}#book-card{grid-column:1;grid-row:1/span 2}#cur-card{grid-column:2;grid-row:1}#hist-card{grid-column:2;grid-row:2}}
+.narrow{max-width:460px;width:100%;margin:12px auto}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 15px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:transform .12s,box-shadow .2s,border-color .2s,filter .2s}
+.btn:hover{border-color:var(--accent)}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:linear-gradient(135deg,#0E8F98,#0A6C74);border-color:transparent;color:#fff;box-shadow:0 10px 22px -12px rgba(14,124,134,.9)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.wa{background:linear-gradient(135deg,#27C56A,#128C48);border-color:transparent;color:#fff}
+.btn.call{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.btn.danger{color:var(--bad)}
+.btn.armed{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.big{width:100%;padding:15px 16px;font-size:17px;border-radius:15px;flex-direction:column;gap:1px}
+.btn.big small{font-weight:500;font-size:13px;opacity:.88}
+.btn.sm{padding:5px 10px;font-size:12.5px;border-radius:9px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* forms */
+form{display:flex;flex-direction:column;gap:14px;margin:0}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field>span{font-size:11.5px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.07em}
+.field input,.field select,.field textarea,.inp{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);min-width:0}
+.field input[readonly]{background:var(--accent-soft);border-color:transparent}
+.field textarea{resize:vertical;min-height:54px}
+.field input:focus,.field select:focus,.field textarea:focus,.inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px}
+.hint{font-size:12.5px;color:var(--ink-2);margin:0}
+.form-err{color:var(--bad);font-size:13.5px;min-height:1em;margin:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border:1px solid var(--line);border-radius:16px;background:var(--surface-2)}
+.seg label{display:flex;flex-direction:column;gap:1px;padding:10px 12px;border-radius:12px;cursor:pointer;min-width:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg b{font-family:var(--font-display);font-size:16px;font-weight:600}
+.seg small{font-size:12px;color:var(--ink-2)}
+.seg label:has(input:checked){background:var(--surface);box-shadow:0 6px 18px -10px rgba(14,124,134,.8),inset 0 0 0 1.5px var(--accent)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:7px 14px;font-size:13.5px;font-weight:600;cursor:pointer}
+.chip[aria-pressed="true"]{background:linear-gradient(135deg,#0E8F98,#0A6C74);border-color:transparent;color:#fff}
+.rule-note{font-size:13px;background:var(--accent-soft);border-radius:12px;padding:10px 12px;color:var(--ink)}
+.rule-note.warn{background:var(--warn-soft)}
+
+/* route box */
+.route-box{position:relative;border:1px solid var(--line);border-radius:16px;background:var(--surface-2);padding:6px 52px 6px 12px}
+.rb-row{display:flex;align-items:center;gap:12px}
+.rb-row label{display:flex;flex-direction:column;flex:1;min-width:0;padding:6px 0}
+.rb-row small{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+.rb-row select{appearance:none;border:0;background:transparent;padding:2px 0;font-family:var(--font-display);font-size:18px;font-weight:600;width:100%;cursor:pointer}
+.rb-row select:focus{outline:none}
+.rb-dot{width:12px;height:12px;border-radius:50%;flex:none;background:var(--ok);box-shadow:0 0 0 4px var(--ok-soft)}
+.rb-dot.to{border-radius:3px;background:var(--bad);box-shadow:0 0 0 4px var(--bad-soft)}
+.rb-line{height:1px;background:var(--line);margin-left:24px}
+.rb-swap{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:17px;line-height:1}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);width:max-content}
+.stepper button{appearance:none;border:0;background:none;width:42px;height:42px;font-size:20px;cursor:pointer;color:var(--accent);font-weight:700}
+.stepper b{min-width:34px;text-align:center;font-family:var(--font-mono);font-size:17px}
+.veh-pick{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--surface-2);border:1px dashed var(--line);font-size:13.5px}
+
+/* pills, plates, tags */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:var(--idle-soft);color:var(--idle)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.pill.sig{background:var(--signal-soft);color:var(--signal)}
+.tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
+.tag.outstation{border-color:var(--signal);color:var(--signal)}
+.tag.site{border-color:var(--accent);color:var(--accent)}
+.plate{display:inline-flex;align-items:stretch;font-family:var(--font-mono);font-weight:600;font-size:12px;border:1.5px solid var(--plate-edge);border-radius:4px;background:var(--plate-bg);color:var(--plate-ink);overflow:hidden;white-space:nowrap;line-height:1.5}
+.plate b{background:var(--plate-band);color:#fff;font-size:7.5px;padding:0 3px;display:flex;align-items:center;font-family:var(--font-body)}
+.plate span{padding:1px 6px}
+.sync{font-size:11px;font-weight:600;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:2px 8px}
+
+/* ride cards */
+.trip{border:1px solid var(--line);border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:10px;background:var(--surface);min-width:0}
+.trip.hot{border-color:var(--signal);background:linear-gradient(var(--signal-soft),var(--signal-soft)) top/100% 4px no-repeat,var(--surface)}
+.trip-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.route-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--font-display);font-size:19px;font-weight:650;line-height:1.2}
+.route-line .arr{color:var(--ink-2);font-family:var(--font-body);font-size:14px}
+.meta{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);align-items:center}
+.note{font-size:13px;color:var(--ink-2);font-style:italic}
+.ref{font-family:var(--font-mono);font-size:12px;color:var(--ink-2)}
+.driver{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--surface-2);flex-wrap:wrap}
+.avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--accent));color:#fff;display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:17px;flex:none}
+.driver>div{flex:1;min-width:140px;display:flex;flex-direction:column;gap:3px}
+.driver b{font-size:16px}
+.steps{display:grid;gap:4px}
+.steps div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.steps i{display:block;height:5px;border-radius:4px;background:var(--idle-soft)}
+.steps .done i{background:var(--ok)}.steps .now i{background:var(--accent)}
+.steps span{font-size:11px;line-height:1.2;color:var(--ink-2);overflow-wrap:anywhere}
+.steps .done span,.steps .now span{color:var(--ink)}
+.steps em{font-style:normal;font-family:var(--font-mono);font-size:11px;color:var(--ink-2)}
+.odo-wrap{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:14px;border:2px solid var(--accent);background:var(--surface)}
+.odo-wrap input{font-family:var(--font-mono);font-size:20px;letter-spacing:.04em}
+.km-big{font-family:var(--font-display);font-size:30px;font-weight:700;line-height:1}
+.hist{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px;flex-wrap:wrap}
+.hist:first-child{border-top:0}
+.hist b{font-weight:600}
+.success{display:flex;flex-direction:column;gap:12px}
+.tick{width:52px;height:52px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:28px;font-weight:700}
+.assign-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+@media (max-width:560px){.assign-row{grid-template-columns:1fr}}
+.notice{border:2px solid var(--ok);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.alertbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px dashed var(--line);border-radius:14px;background:var(--surface);font-size:13.5px}
+.alertbar.on{border-style:solid;border-color:transparent;background:var(--ok-soft)}
+
+/* kpis & tables */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid rgba(15,30,46,.06);border-radius:16px;box-shadow:var(--shadow);padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi span{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.kpi b{font-family:var(--font-display);font-size:32px;font-weight:650;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi small{font-size:12px;color:var(--ink-2)}
+.kpi.alert b{color:var(--signal)}
+.tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.tbl-wrap.tall{max-height:480px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-2);background:var(--surface-2);font-weight:600;position:sticky;top:0;z-index:1}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.upload{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px;border:2px dashed var(--accent);border-radius:16px;background:var(--accent-soft)}
+.upload>div{display:flex;flex-direction:column;gap:3px;font-size:13.5px;color:var(--ink-2);flex:1 1 280px;min-width:0}
+.upload b{color:var(--ink);font-size:16px;font-family:var(--font-display)}
+.upload.drag{border-color:var(--gold);background:var(--surface)}
+.settings-list{display:flex;flex-wrap:wrap;gap:6px}
+.settings-list span{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:var(--surface-2)}
+.settings-list button{appearance:none;border:0;background:none;cursor:pointer;color:var(--ink-2);font-size:16px;line-height:1;padding:0 4px}
+.add-row{display:flex;gap:8px}
+.qr-card{border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;background:#fff;color:#111;max-width:320px}
+.qr-card svg{width:220px;height:220px}
+.qr-card small{font-size:11px;color:#444;overflow-wrap:anywhere}
+code{font-family:var(--font-mono);font-size:12px;background:var(--surface-2);padding:1px 6px;border-radius:6px;border:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:14px;font-size:14px;font-weight:600;max-width:calc(100% - 32px);z-index:20;box-shadow:0 6px 24px rgb(0 0 0 / .25)}
+.loading{padding:60px 0;text-align:center;color:var(--ink-2)}
+@media print{body.printing-qr *{visibility:hidden}body.printing-qr #qr-box,body.printing-qr #qr-box *{visibility:visible}body.printing-qr #qr-box{position:absolute;left:0;top:0}}
+@media (max-width:640px){.brand h1{font-size:20px}.panel{padding:16px}.tab{padding:10px 12px;font-size:15px}.route-line{font-size:17px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Dholera <i>Site</i> Transport</h1>
+      <small>TSMPL FAB project · L&amp;T staff vehicles</small>
+    </div>
+    <div class="status-row">
+      <span class="who" id="who" hidden><b id="who-name"></b><span class="role" id="who-role" hidden></span><button class="link-btn" data-act="signout">Sign out</button></span>
+      <span class="net" id="net">Connecting…</span>
+      <span class="clock" id="clock">--:--</span>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Views"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner" id="banner" hidden></div>
+
+  <section id="v-loading"><div class="loading">Loading…</div></section>
+
+  <!-- SIGN IN: email, then a 6-digit code sent to that email -->
+  <section id="v-login" hidden>
+    <div class="panel narrow">
+      <div><h2 id="login-title">Sign in</h2><p class="hint" style="margin-top:4px" id="login-sub">For L&amp;T staff. Enter your <b>@lntecc.com</b> email and we send you a login code.</p></div>
+      <form id="login-form" novalidate>
+        <label class="field" id="l-email-wrap"><span>L&amp;T email</span><input id="l-email" type="email" autocomplete="email" placeholder="firstname.lastname@lntecc.com" inputmode="email"></label>
+        <label class="field" id="l-code-wrap" hidden><span>6-digit code from your email</span><input id="l-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="••••••" style="font-family:var(--font-mono);font-size:26px;letter-spacing:.35em;text-align:center"></label>
+        <p class="form-err" id="l-err" role="alert"></p>
+        <button class="btn primary big" type="submit" id="l-btn"><span id="l-submit">Send code</span><small id="l-submit-sub">कोड भेजें</small></button>
+        <div class="btn-row" id="l-code-actions" hidden><button class="btn" type="button" data-act="resendcode" id="l-resend">Send a new code</button><button class="btn" type="button" data-act="changeemail">Use another email</button></div>
+      </form>
+      <p class="hint" id="l-foot">Sign-in needs the internet once. After that the app keeps you signed in on this phone, even offline.</p>
+    </div>
+  </section>
+
+  <!-- PROFILE -->
+  <section id="v-profile" hidden>
+    <div class="panel narrow">
+      <div><h2>Your details</h2><p class="hint" style="margin-top:4px" id="p-sub">Asked once. The driver and admin see these on your ride.</p></div>
+      <form id="profile-form" novalidate>
+        <label class="field"><span>Full name · नाम</span><input id="p-name" autocomplete="name"></label>
+        <div class="grid2">
+          <label class="field"><span>PS no.</span><input id="p-ps"></label>
+          <label class="field"><span>Mobile · मोबाइल</span><input id="p-phone" inputmode="tel" placeholder="98XXXXXXXX"></label>
+          <label class="field"><span>Cadre</span><select id="p-cadre"></select></label>
+          <label class="field"><span>Department</span><select id="p-dept"></select></label>
+        </div>
+        <p class="form-err" id="p-err" role="alert"></p>
+        <button class="btn primary big" type="submit">Save and continue</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- RIDE (staff home) -->
+  <section id="v-ride" hidden>
+    <div class="ride-grid">
+      <div class="panel" id="cur-card">
+        <div class="panel-h"><div><h2>Current ride</h2><p>From request to drop, with your driver's details.</p></div></div>
+        <div id="cur-list" class="list"></div>
+      </div>
+      <div class="panel" id="book-card">
+        <div id="b-success" hidden></div>
+        <form id="book-form" novalidate>
+          <div class="panel-h"><div><h2>Where to? · कहाँ जाना है?</h2><p id="b-who"></p></div><button class="btn sm" type="button" data-act="editprofile">My details</button></div>
+          <div class="seg" role="radiogroup" aria-label="Ride type">
+            <label><input type="radio" name="kind" value="site" checked><b>Within site</b><small>Website only · admin approves</small></label>
+            <label><input type="radio" name="kind" value="outstation"><b>Long distance</b><small>Airport, station, home, vendor · IS approval</small></label>
+          </div>
+          <div class="route-box">
+            <div class="rb-row"><span class="rb-dot"></span><label><small>Pickup · कहाँ से</small><select id="b-from"></select></label></div>
+            <div class="rb-line"></div>
+            <div class="rb-row"><span class="rb-dot to"></span><label><small>Drop · कहाँ तक</small><select id="b-to"></select></label></div>
+            <button class="rb-swap" type="button" data-act="swap" aria-label="Swap pickup and drop">⇅</button>
+          </div>
+          <label class="field" id="b-other-wrap" hidden><span>Destination name</span><input id="b-other" placeholder="e.g. Vendor factory, Sanand"></label>
+          <div class="grid2">
+            <div class="field"><span>When</span><div class="chips" id="b-when-chips"><button type="button" class="chip" data-act="when" data-v="now" aria-pressed="true">Now</button><button type="button" class="chip" data-act="when" data-v="later" aria-pressed="false">Schedule</button></div></div>
+            <div class="field"><span>People (incl. you)</span><div class="stepper"><button type="button" data-act="pax" data-d="-1" aria-label="Fewer people">−</button><b id="b-pax">1</b><button type="button" data-act="pax" data-d="1" aria-label="More people">+</button></div></div>
+          </div>
+          <label class="field" id="b-when-wrap" hidden><span id="b-when-label">Pickup time</span><input type="datetime-local" id="b-when"></label>
+          <label class="field"><span>Vehicle and driver · गाड़ी</span><select id="b-veh"></select><small class="hint" id="b-veh-hint"></small></label>
+          <div id="b-long" hidden style="display:flex;flex-direction:column;gap:12px">
+            <label class="field"><span>Purpose</span><select id="b-purpose"></select></label>
+            <div class="grid2">
+              <label class="field"><span>Immediate supervisor (IS) name</span><input id="b-isname"></label>
+              <label class="field"><span>IS email</span><input id="b-isemail" type="email" placeholder="name@lntecc.com"></label>
+              <label class="field"><span>IS WhatsApp</span><input id="b-isphone" inputmode="tel" placeholder="98XXXXXXXX"></label>
+            </div>
+          </div>
+          <label class="field"><span id="b-note-label">Note for admin</span><textarea id="b-note" placeholder="Optional"></textarea></label>
+          <div class="rule-note" id="b-rule"></div>
+          <p class="form-err" id="b-err" role="alert"></p>
+          <button class="btn primary big" type="submit"><span id="b-submit">Request ride</span><small>गाड़ी बुक करें</small></button>
+        </form>
+      </div>
+      <div class="panel" id="hist-card">
+        <div class="panel-h"><h2>Ride history</h2></div>
+        <div id="hist-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPROVALS (immediate supervisor) -->
+  <section id="v-approvals" hidden>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Approvals</h2><p>Long-distance rides your team asked for. Only you can approve rides that name you as IS.</p></div></div>
+      <div id="ap-list" class="list"></div>
+    </div>
+  </section>
+
+  <!-- DISPATCH (admin) -->
+  <section id="v-dispatch" hidden style="display:flex;flex-direction:column;gap:18px">
+    <div class="alertbar" id="d-alert"></div>
+    <div id="d-notice" class="list"></div>
+    <div class="kpis" id="d-kpis"></div>
+    <div class="cols">
+      <div class="panel"><div class="panel-h"><div><h2>Ride requests</h2><p>Check the vehicle, then approve. Oldest first.</p></div></div><div id="d-req" class="list"></div></div>
+      <div class="panel"><div class="panel-h"><div><h2>Waiting for IS</h2><p>Long-distance rides the immediate supervisor has not decided yet.</p></div></div><div id="d-is" class="list"></div></div>
+    </div>
+    <div class="panel"><div class="panel-h"><div><h2>On the move</h2><p>Assigned and running rides, with speedometer readings.</p></div></div><div id="d-move" class="list"></div></div>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Fleet</h2><p id="d-fleet-sub">Every vehicle and driver right now.</p></div>
+        <input class="inp" id="d-vq" placeholder="Search plate, driver, place" style="width:min(100%,280px)"></div>
+      <div class="chips" id="d-vfilter"></div>
+      <div id="d-fleet"></div>
+    </div>
+    <div class="panel"><div class="panel-h"><div><h2>Completed today</h2><p>Km from the speedometer readings.</p></div></div><div id="d-done"></div></div>
+  </section>
+
+  <!-- RECORDS (admin, managers) -->
+  <section id="v-records" hidden style="display:flex;flex-direction:column;gap:18px">
+    <div class="panel-h">
+      <div class="chips" id="r-range">
+        <button class="chip" data-range="today">Today</button><button class="chip" data-range="7d">Last 7 days</button>
+        <button class="chip" data-range="month">This month</button><button class="chip" data-range="30d">Last 30 days</button><button class="chip" data-range="all">All</button>
+      </div>
+      <button class="btn primary" data-act="excel">Download Excel</button>
+    </div>
+    <div class="kpis" id="r-kpis"></div>
+    <div class="panel"><div class="panel-h"><div><h2>Km per vehicle and driver</h2><p>Use this to pay drivers. Download Excel for the day-wise sheet.</p></div></div><div id="r-veh"></div></div>
+    <div class="panel"><div class="panel-h"><div><h2>Km per day</h2><p>One line per vehicle per day.</p></div></div><div id="r-day"></div></div>
+    <div class="panel"><div class="panel-h"><h2>Every ride</h2><input class="inp" id="r-q" placeholder="Search name, PS no., place, vehicle" style="width:min(100%,320px)"></div><div id="r-log"></div></div>
+  </section>
+
+  <!-- SETUP (admin) -->
+  <section id="v-setup" hidden style="display:flex;flex-direction:column;gap:18px">
+    <div class="panel">
+      <h2>Settings</h2>
+      <form id="set-form" novalidate>
+        <div class="grid2">
+          <label class="field"><span>Admin WhatsApp number</span><input id="s-phone" inputmode="tel" placeholder="98XXXXXXXX"></label>
+          <label class="field"><span>Rate per km (₹), optional</span><input id="s-rate" type="number" min="0" step="0.5" placeholder="e.g. 12"></label>
+        </div>
+        <label class="field"><span>Managers who can see Records (emails, comma separated)</span><input id="s-managers" placeholder="manager@lntecc.com"></label>
+        <p class="hint">The admin number gets a copy of long-distance requests on WhatsApp. Rides within the site stay on the website only.</p>
+        <div><button class="btn primary" type="submit">Save settings</button></div>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Vehicles and drivers</h2><p>Upload once, upload again any time to update. Speedometer history is kept.</p></div><span class="pill acc" id="f-veh-count">0 vehicles</span></div>
+      <div class="upload" data-drop="veh">
+        <div><b>Upload the vehicle list (Excel or CSV)</b><span>Columns: Vehicle no · Type · Seats · Driver name · Driver mobile · Parked at. The order can differ; headings are read automatically.</span></div>
+        <label class="btn primary">Choose file<input type="file" id="veh-file" accept=".xlsx,.xls,.csv" hidden></label>
+        <p class="form-err" id="veh-msg" role="status" style="flex-basis:100%"></p>
+      </div>
+      <details><summary style="cursor:pointer;font-weight:600">Add one vehicle</summary>
+        <form id="veh-form" novalidate style="padding-top:12px">
+          <div class="grid2">
+            <label class="field"><span>Vehicle no.</span><input id="v-plate" placeholder="GJ 01 AB 1234"></label>
+            <label class="field"><span>Type</span><input id="v-type" placeholder="Dzire, Innova, Bolero…"></label>
+            <label class="field"><span>Seats</span><input id="v-seats" type="number" min="1" max="60" value="4"></label>
+            <label class="field"><span>Driver name</span><input id="v-driver"></label>
+            <label class="field"><span>Driver mobile</span><input id="v-dphone" inputmode="tel"></label>
+            <label class="field"><span>Parked at</span><select id="v-at"></select></label>
+          </div>
+          <p class="form-err" id="v-err" role="alert"></p>
+          <div><button class="btn primary" type="submit">Save vehicle</button></div>
+        </form>
+      </details>
+      <div id="f-veh"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h2>Staff list</h2><p>Staff who sign in with an email on this list get their details and IS filled in, and can only send long-distance requests to that IS.</p></div><span class="pill acc" id="f-dir-count">0 staff</span></div>
+      <div class="upload" data-drop="dir">
+        <div><b>Upload the staff list (Excel or CSV)</b><span>Columns: PS no · Name · Email · Cadre · Department · Mobile · IS name · IS email · IS WhatsApp. Rows without an @lntecc.com email are skipped.</span></div>
+        <label class="btn primary">Choose file<input type="file" id="dir-file" accept=".xlsx,.xls,.csv" hidden></label>
+        <p class="form-err" id="dir-msg" role="status" style="flex-basis:100%"></p>
+      </div>
+      <input class="inp" id="f-dq" placeholder="Search name, email, PS no., IS" style="width:min(100%,320px)">
+      <div id="f-dir"></div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <h2>Pickup points on site</h2>
+        <div class="settings-list" id="f-stops"></div>
+        <div class="add-row"><input class="inp" id="f-stop-new" placeholder="e.g. SUN Building"><button class="btn" data-act="addplace" data-k="stops">Add</button></div>
+        <h2>Long-distance destinations</h2>
+        <div class="settings-list" id="f-outs"></div>
+        <div class="add-row"><input class="inp" id="f-out-new" placeholder="e.g. Dhandhuka bus stand"><button class="btn" data-act="addplace" data-k="outstation">Add</button></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>QR code for staff</h2><button class="btn" data-act="printqr">Print</button></div>
+        <div id="qr-box"></div>
+        <div class="btn-row"><button class="btn" data-act="loadsample" id="btn-sample">Load sample data</button><button class="btn danger" data-act="clearsample" id="btn-clear">Remove sample data</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGES OPENED FROM A LINK: IS approval, admin assign, track -->
+  <section id="v-focus" hidden><div class="panel" id="focus-body"></div></section>
+
+  <section id="v-gate" hidden><div class="panel narrow"><h2 id="gate-title">Not available</h2><p class="muted" style="margin:0" id="gate-sub"></p></div></section>
+</main>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function(){
+"use strict";
+const MIN=60000,DAY=864e5;
+const DEPTS=["MEP","Civil","Planning","QA/QC","HSE","Procurement","Admin & HR","Client / PMC","Management","Other"];
+const CADRES=["DET","GET","TC1","TC2","TC3","TC4","S1","S2","O1","O2","M1A","M1B","M1C","M2A","M2B","M2C","M3A","M3B","M3C","PD","VP","Other"];
+const PURPOSES=["Factory / vendor visit","Going home","Airport","Railway station","Other official work"];
+const DEFAULT_CFG={stops:["Project Office","Gate No. 1","FAB Building","CUP Building","WWT Building","Plot 4","Guest House 1","Guest House 2"],outstation:["Ahmedabad Airport","Ahmedabad Railway Station","Ahmedabad city","Dhandhuka","Home town"],adminPhone:"",managers:[],ratePerKm:0};
+const STATUS={is_pending:['Waiting for IS','sig'],requested:['Waiting for admin','sig'],assigned:['Driver assigned','acc'],onboard:['On the way','acc'],done:['Reached','ok'],cancelled:['Cancelled',''],rejected:['Not approved','bad']};
+const ACTIVE=['is_pending','requested','assigned','onboard'];
+const VST={free:['Free','ok'],assigned:['Assigned','warn'],on_trip:['On trip','acc'],break:['On break',''],off:['Off duty','']};
+const MAIN_TABS=[['ride','Ride'],['approvals','Approvals'],['dispatch','Dispatch'],['records','Records'],['setup','Setup']];
+const ADMIN_EMAILS=(window.ADMIN_EMAILS||[]).map(e=>String(e).trim().toLowerCase()).filter(Boolean);
+
+const S={mode:'loading',uid:null,email:'',isAdmin:false,cfg:clone(DEFAULT_CFG),vehicles:new Map(),trips:new Map(),dir:new Map(),dirMe:null,
+  tab:'ride',online:navigator.onLine,confirm:null,range:'today',logQ:'',vehQ:'',vehF:'all',dirQ:'',focus:null,focusLoaded:false,
+  lastBooked:null,editProfile:false,draft:{},asSel:{},notices:[],login:{step:'email',email:'',busy:false,until:0},when:'now',pax:1,dbErr:false};
+let db=null,auth=null;
+
+/* ---------- helpers ---------- */
+function clone(o){return JSON.parse(JSON.stringify(o))}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={get(k,d){try{const v=localStorage.getItem('dst7:'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('dst7:'+k,JSON.stringify(v))}catch(e){}}};
+const fmtT=ms=>new Date(ms).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
+const fmtD=ms=>new Date(ms).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+function fmtDT(ms){if(!ms)return '';const d=new Date(ms),n=new Date();if(d.toDateString()===n.toDateString())return 'Today '+fmtT(ms);if(new Date(n.getTime()+DAY).toDateString()===d.toDateString())return 'Tomorrow '+fmtT(ms);if(new Date(n.getTime()-DAY).toDateString()===d.toDateString())return 'Yesterday '+fmtT(ms);return fmtD(ms)+' '+fmtT(ms);}
+const mins=ms=>Math.max(0,Math.round(ms/MIN));
+const dur=m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':'');
+function dayStart(ms){const d=ms?new Date(ms):new Date();d.setHours(0,0,0,0);return d.getTime();}
+const digits=p=>String(p||'').replace(/\D/g,'');
+const intl=p=>{const d=digits(p);return d.length===10?'91'+d:d;};
+const waLink=(p,t)=>(intl(p)?'https://wa.me/'+intl(p):'https://wa.me/')+'?text='+encodeURIComponent(t);
+const smsLink=(p,t)=>'sms:'+(intl(p)?'+'+intl(p):'')+'?&body='+encodeURIComponent(t);
+const telLink=p=>'tel:'+(intl(p)?'+'+intl(p):'');
+const pageUrl=()=>location.href.split('#')[0];
+const ref=t=>String(t.id||'').replace(/[^A-Za-z0-9]/g,'').slice(-5).toUpperCase();
+const first=n=>String(n||'').split(' ')[0];
+const initials=n=>String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'?';
+const intOf=v=>{const n=parseInt(String(v==null?'':v).replace(/[^0-9]/g,''),10);return n>0?n:null;};
+const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const isLntEmail=e=>/^[^@\s]+@lntecc\.com$/i.test(String(e||'').trim());
+const pill=(t,c)=>`<span class="pill ${c||''}">${esc(t)}</span>`;
+const plateHtml=p=>p?`<span class="plate"><b>IND</b><span>${esc(p)}</span></span>`:'';
+const st=t=>STATUS[t.status]||[t.status,''];
+const kindTag=k=>`<span class="tag ${k}">${k==='outstation'?'Long distance':'Within site'}</span>`;
+const syncTag=t=>t&&t._pending?'<span class="sync">Waiting for network</span>':'';
+const vehId=p=>String(p||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const isManager=()=>!!S.email&&(S.cfg.managers||[]).includes(S.email);
+const canRecords=()=>S.isAdmin||isManager();
+const allTrips=()=>[...S.trips.values()];
+const live=()=>S.mode==='live'||S.mode==='demo';
+
+let toastTimer;
+function toast(msg){const el=$('#toast');el.textContent=msg;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true},4000);}
+function onWriteErr(e){
+  console.error(e);const c=e&&e.code;
+  if(c==='permission-denied')toast(S.isAdmin?'The database refused this change. Publish the latest firestore.rules in Firebase → Firestore → Rules.':'The database refused this. Reload the page; if it happens again, tell the transport admin.');
+  else if(c==='resource-exhausted')toast("Today's free database limit is used up. It resets tomorrow.");
+  else if(c==='not-found')toast('This record no longer exists.');
+  else toast('Could not save. Check the connection and try again.');
+}
+
+/* ---------- profile ---------- */
+function profile(){
+  const own=LS.get('profile:'+S.email,null)||{};const d=S.dirMe;
+  if(d)return {name:d.name||own.name||'',psNo:d.psNo||own.psNo||'',phone:own.phone||d.mobile||'',cadre:d.cadre||own.cadre||'',dept:d.dept||own.dept||'',isName:d.isName||'',isEmail:String(d.isEmail||'').toLowerCase(),isPhone:d.isPhone||'',fromDir:true};
+  return own.name?Object.assign({fromDir:false},own):null;
+}
+const profileOk=()=>{const p=profile();return !!(p&&p.name&&p.name.length>1&&digits(p.phone).length>=10);};
+
+/* ---------- alerts: sound + notification while the page is open ---------- */
+const Alerts={on:false,ctx:null,
+  async enable(quiet){
+    try{this.ctx=this.ctx||new (window.AudioContext||window.webkitAudioContext)();await this.ctx.resume();}catch(e){}
+    try{if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission();}catch(e){}
+    this.on=true;if(!quiet){this.beep();toast('Alerts are on. Keep this page open.');}renderAll();
+  },
+  beep(){
+    const c=this.ctx;if(c){[0,0.28,0.56].forEach(t=>{try{const o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=t===0.28?1175:880;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(0.0001,c.currentTime+t);g.gain.exponentialRampToValueAtTime(0.25,c.currentTime+t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+t+0.22);o.start(c.currentTime+t);o.stop(c.currentTime+t+0.24);}catch(e){}});}
+    try{if(navigator.vibrate)navigator.vibrate([250,120,250]);}catch(e){}
+  },
+  async notify(title,body,hash){
+    toast(title+': '+body);if(!this.on)return;this.beep();
+    try{if('Notification' in window&&Notification.permission==='granted'){
+      const reg='serviceWorker' in navigator?await navigator.serviceWorker.getRegistration():null;
+      const opts={body,tag:'dst-'+Date.now(),data:{hash:hash||''},icon:'icon-192.png'};
+      if(reg&&reg.showNotification)reg.showNotification(title,opts);else new Notification(title,opts);}}catch(e){}
+  }
+};
+
+/* ---------- data writes (work offline: saved on the phone, sent when the network is back) ---------- */
+const COLL={trips:()=>S.trips,vehicles:()=>S.vehicles,directory:()=>S.dir};
+const store={
+  newId(){return db?db.collection('trips').doc().id:'t'+Math.random().toString(36).slice(2,10);},
+  write(ops){
+    if(!ops.length)return Promise.resolve();
+    if(db){
+      let p=Promise.resolve();
+      for(let i=0;i<ops.length;i+=400){const ch=ops.slice(i,i+400);
+        p=p.then(()=>{const b=db.batch();ch.forEach(o=>{const r=db.doc(o.c+'/'+o.id);if(o.del)b.delete(r);else if(o.upd)b.update(r,o.upd);else b.set(r,o.set,o.merge?{merge:true}:{});});return b.commit();});}
+      const q=p.catch(e=>{onWriteErr(e);return Promise.reject(e);});q.catch(()=>{});return q;
+    }
+    ops.forEach(o=>{
+      if(o.c==='config'){S.cfg=normCfg(Object.assign({},o.merge?S.cfg:{},o.set||o.upd));return;}
+      const m=COLL[o.c]();if(o.del){m.delete(o.id);return;}
+      const prev=(o.upd||o.merge)?(m.get(o.id)||{}):{};m.set(o.id,Object.assign({},prev,o.upd||o.set,{id:o.id}));
+    });
+    detectNew();renderAll();return Promise.resolve();
+  }
+};
+function normCfg(d){
+  d=d||{};const arr=(x,def)=>Array.isArray(x)&&x.length?x.slice():def.slice();
+  return {stops:arr(d.stops,DEFAULT_CFG.stops),outstation:arr(d.outstation,DEFAULT_CFG.outstation),adminPhone:d.adminPhone||'',managers:Array.isArray(d.managers)?d.managers.map(x=>String(x).toLowerCase()):[],ratePerKm:+d.ratePerKm||0};
+}
+
+/* ---------- live data ---------- */
+const SRC={},subs={};
+const docMap=snap=>new Map(snap.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id,_pending:d.metadata.hasPendingWrites})]));
+function listen(key,q){if(subs[key])return;subs[key]=q.onSnapshot({includeMetadataChanges:true},s=>{SRC[key]=docMap(s);mergeTrips();},e=>onDbErr(e,key));}
+function stop(key){if(subs[key]){try{subs[key]();}catch(e){}delete subs[key];}delete SRC[key];}
+function stopAll(){Object.keys(subs).forEach(stop);Object.keys(SRC).forEach(k=>delete SRC[k]);S.trips=new Map();S.vehicles=new Map();S.dir=new Map();}
+function mergeTrips(){const m=new Map();for(const k of ['hist','today','admin','is','mine','one'])if(SRC[k])SRC[k].forEach((t,id)=>m.set(id,t));S.trips=m;detectNew();renderAll();}
+function onDbErr(e,key){console.error(key,e);if(e&&e.code==='permission-denied'){S.dbErr=true;renderAll();}}
+function startLive(){
+  stopAll();S.dbErr=false;
+  const vq=S.isAdmin?db.collection('vehicles'):db.collection('vehicles').where('status','==','free');
+  subs.veh=vq.onSnapshot(s=>{S.vehicles=new Map(s.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id})]));renderAll();},e=>onDbErr(e,'veh'));
+  subs.cfg=db.doc('config/site').onSnapshot(s=>{S.cfg=normCfg(s.exists?s.data():{});ensureScope();renderAll();},e=>onDbErr(e,'cfg'));
+  S.dirMe=LS.get('dir:'+S.email,null);
+  subs.me=db.doc('directory/'+S.email).onSnapshot(s=>{S.dirMe=s.exists?s.data():null;LS.set('dir:'+S.email,S.dirMe);renderAll();},e=>console.warn('directory',e));
+  listen('mine',db.collection('trips').where('createdBy','==',S.uid));
+  listen('is',db.collection('trips').where('isEmail','==',S.email));
+  if(S.isAdmin){listen('admin',db.collection('trips').where('status','in',ACTIVE));listen('today',db.collection('trips').where('createdAt','>=',dayStart()));}
+  ensureScope();
+}
+function ensureScope(){
+  if(!db||S.mode!=='live')return;
+  if(S.tab==='records'&&canRecords())loadHist();
+  if(S.tab==='setup'&&S.isAdmin&&!subs.dir)subs.dir=db.collection('directory').onSnapshot(s=>{S.dir=new Map(s.docs.map(d=>[d.id,Object.assign({},d.data(),{id:d.id})]));renderAll();},e=>onDbErr(e,'dir'));
+  if(S.tab==='focus'&&S.focus){
+    if(S.focusKey!==S.focus.id){stop('one');S.focusKey=S.focus.id;S.focusLoaded=false;S.focusErr=null;}
+    if(!subs.one)subs.one=db.doc('trips/'+S.focus.id).onSnapshot({includeMetadataChanges:true},s=>{SRC.one=new Map(s.exists?[[s.id,Object.assign({},s.data(),{id:s.id,_pending:s.metadata.hasPendingWrites})]]:[]);S.focusLoaded=true;mergeTrips();},e=>{S.focusLoaded=true;S.focusErr=e&&e.code;renderAll();});
+  }
+}
+let histKey='',histAt=0;
+function rangeSince(){const now=Date.now();if(S.range==='today')return dayStart();if(S.range==='7d')return now-7*DAY;if(S.range==='30d')return now-30*DAY;if(S.range==='month'){const d=new Date();d.setDate(1);d.setHours(0,0,0,0);return d.getTime();}return 0;}
+async function loadHist(force){
+  if(!db||!canRecords())return;const now=Date.now();
+  if(!force&&histKey===S.range&&now-histAt<120000)return;histKey=S.range;histAt=now;
+  try{const s=await db.collection('trips').where('createdAt','>=',rangeSince()).orderBy('createdAt','desc').limit(10000).get();SRC.hist=docMap(s);mergeTrips();}catch(e){onDbErr(e,'hist');}
+}
+
+/* new requests ring for the admin, approvals ring for the IS, driver assigned rings for staff */
+const seen=new Set();
+function detectNew(){
+  const now=Date.now(),fresh=ms=>ms&&now-ms<3*MIN;
+  S.trips.forEach(t=>{
+    const k=t.id+':'+t.status;if(seen.has(k))return;seen.add(k);
+    if(S.isAdmin&&t.status==='requested'&&(fresh(t.createdAt)||fresh(t.isDecidedAt)))Alerts.notify('New ride request',`${t.passenger}: ${t.from} → ${t.to}`,'dispatch');
+    else if(t.status==='is_pending'&&t.isEmail===S.email&&fresh(t.createdAt))Alerts.notify('Approval needed',`${t.passenger}: ${t.from} → ${t.to}`,'approvals');
+    else if(t.status==='assigned'&&t.createdBy===S.uid&&fresh(t.assignedAt))Alerts.notify('Driver assigned',`${t.plate||''} · ${t.driver||''} · go to ${t.from}`,'ride');
+  });
+}
+
+/* ---------- messages ---------- */
+function isMsg(t){
+  return [`Dholera Site Transport · approval needed (Ref ${ref(t)})`,
+    `${t.passenger} (${[t.cadre,t.dept].filter(Boolean).join(', ')})${t.phone?' · '+t.phone:''} needs a vehicle.`,
+    `Purpose: ${t.purpose||'-'}`,`From: ${t.from}`,`To: ${t.to}`,`When: ${t.when?fmtDT(t.when):'Now'} · People: ${t.pax||1}`,
+    t.note?`Note: ${t.note}`:null,'',`Approve or reject (sign in with ${t.isEmail}):`,`${pageUrl()}#approve-${t.id}`].filter(x=>x!==null).join('\n');
+}
+function adminCopyMsg(t){
+  return [`Dholera Site Transport · long-distance request (Ref ${ref(t)})`,`${t.passenger} · ${t.phone||''}`,`${t.from} → ${t.to}`,`When: ${t.when?fmtDT(t.when):'Now'} · People: ${t.pax||1}`,`Purpose: ${t.purpose||'-'}`,
+    `IS: ${t.isName||''} (${t.isEmail})`,t.note?`Note: ${t.note}`:null,'',`After IS approval, assign here: ${pageUrl()}#assign-${t.id}`].filter(x=>x!==null).join('\n');
+}
+function adminAfterIsMsg(t){
+  return [`Dholera Site Transport · IS APPROVED (Ref ${ref(t)})`,`${t.passenger} · ${t.from} → ${t.to}`,`When: ${t.when?fmtDT(t.when):'Now'} · People: ${t.pax||1}`,`Approved by ${t.isName||t.isEmail}`,'',`Assign a vehicle: ${pageUrl()}#assign-${t.id}`].join('\n');
+}
+function staffIsResultMsg(t,ok){return `Ref ${ref(t)}: your long-distance ride ${t.from} → ${t.to} was ${ok?'APPROVED by '+(t.isName||'your IS')+'. The transport admin will assign a vehicle.':'not approved'+(t.isNote?': '+t.isNote:'')+'.'} Track: ${pageUrl()}#track-${t.id}`;}
+function driverMsg(t){
+  return [`Dholera Site Transport · new trip (${t.plate||''})`,`Pickup: ${t.from} · ${t.when?fmtDT(t.when):'now'}`,`Drop: ${t.to}`,`Passenger: ${t.passenger}${(+t.pax||1)>1?' +'+(t.pax-1):''}${t.phone?' · '+t.phone:''}`,t.note?`Note: ${t.note}`:null,'Note the speedometer reading at pickup and drop.'].filter(x=>x!==null).join('\n');
+}
+
+/* ---------- vehicle choice ---------- */
+function freeVehicles(from,pax){
+  return [...S.vehicles.values()].filter(v=>(v.status||'free')==='free')
+    .sort((a,b)=>((a.at===from?0:1)-(b.at===from?0:1))||(((+a.seats||4)>=pax?0:1)-((+b.seats||4)>=pax?0:1))||String(a.plate).localeCompare(String(b.plate)));
+}
+const vehLabel=v=>`${v.plate} · ${v.driver||'Driver'} · ${v.type||''} ${v.seats||4} seats · at ${v.at||'?'}`;
+
+/* ---------- booking form ---------- */
+const kind=()=>{const c=document.querySelector('input[name="kind"]:checked');return c?c.value:'site';};
+function fillSelect(sel,items,keep){
+  const sig=JSON.stringify(items);if(sel.dataset.sig===sig)return;
+  const prev=keep!==undefined?keep:sel.value;
+  sel.innerHTML=items.map(i=>Array.isArray(i)?`<option value="${esc(i[0])}">${esc(i[1])}</option>`:`<option>${esc(i)}</option>`).join('');
+  sel.dataset.sig=sig;if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+}
+function defaultWhen(){const d=new Date(Date.now()+30*MIN);d.setMinutes(Math.ceil(d.getMinutes()/5)*5,0,0);const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+function syncBook(){
+  if(!live())return;
+  const k=kind(),p=profile()||{};
+  $('#b-who').textContent=p.name?`Booking as ${p.name}${p.cadre?' · '+p.cadre:''}${p.phone?' · '+p.phone:''}`:'';
+  fillSelect($('#b-from'),S.cfg.stops);
+  fillSelect($('#b-to'),k==='outstation'?[...S.cfg.outstation,['__other','Other…']]:S.cfg.stops);
+  if($('#b-to').value===$('#b-from').value){const alt=(k==='outstation'?S.cfg.outstation:S.cfg.stops).find(s=>s!==$('#b-from').value);if(alt)$('#b-to').value=alt;}
+  $('#b-other-wrap').hidden=!(k==='outstation'&&$('#b-to').value==='__other');
+  $('#b-long').hidden=k!=='outstation';
+  const later=k==='outstation'||S.when==='later';
+  $('#b-when-chips').parentElement.hidden=k==='outstation';
+  document.querySelectorAll('#b-when-chips .chip').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.v===S.when)));
+  $('#b-when-wrap').hidden=!later;
+  if(later&&!$('#b-when').value)$('#b-when').value=defaultWhen();
+  $('#b-when-label').textContent=k==='outstation'?'Leave at (date and time)':'Pickup time';
+  $('#b-pax').textContent=S.pax;
+  const from=$('#b-from').value,free=freeVehicles(from,S.pax);
+  fillSelect($('#b-veh'),[['','Any free vehicle · admin chooses'],...free.map(v=>[v.id,vehLabel(v)+((+v.seats||4)<S.pax?' (too small)':'')])]);
+  $('#b-veh-hint').textContent=(S.online?'':'Offline: this list may be out of date. ')+(free.length?`${free.length} vehicle${free.length>1?'s':''} free right now. Nearest to ${from} first. The admin confirms the vehicle.`:'No vehicle is free right now. Send the request; the admin assigns the next free one.');
+  if(k==='outstation'){
+    fillSelect($('#b-purpose'),PURPOSES);
+    const lock=p.fromDir&&p.isEmail;
+    [['#b-isname','isName'],['#b-isemail','isEmail'],['#b-isphone','isPhone']].forEach(([s,f])=>{const el=$(s);el.readOnly=!!lock&&!!p[f];if(lock&&p[f])el.value=p[f];else if(!el.value&&p[f])el.value=p[f];});
+  }
+  $('#b-note-label').textContent=k==='outstation'?'Details (flight, train, factory name)':'Note for admin (optional)';
+  $('#b-rule').innerHTML=k==='site'?'Rides within the site go to the transport admin on this website. You will see the driver here once approved.'
+    :`Your <b>immediate supervisor (IS)</b> approves first. After you request, send the approval link to your IS on WhatsApp. ${p.fromDir&&p.isEmail?'Your IS is taken from the staff list.':''}`;
+  $('#b-submit').textContent=k==='outstation'?'Request · send for IS approval':'Request ride';
+}
+function initBook(){
+  $('#book-form').addEventListener('change',syncBook);
+  $('#book-form').addEventListener('submit',e=>{
+    e.preventDefault();const err=$('#b-err');err.textContent='';
+    const p=profile();if(!profileOk()){S.editProfile=true;renderAll();return;}
+    const k=kind(),from=$('#b-from').value;let to=$('#b-to').value;if(to==='__other')to=$('#b-other').value.trim();
+    const later=k==='outstation'||S.when==='later';
+    const when=later&&$('#b-when').value?new Date($('#b-when').value).getTime():null;
+    const note=$('#b-note').value.trim(),vid=$('#b-veh').value,v=vid?S.vehicles.get(vid):null;
+    if(!to){err.textContent='Enter where you are going.';$('#b-other').focus();return;}
+    if(from===to){err.textContent='Pickup and drop are the same. Choose a different drop point.';return;}
+    if(later&&!when){err.textContent='Choose the date and time.';$('#b-when').focus();return;}
+    if(when&&when<Date.now()-5*MIN){err.textContent='That time has already passed.';$('#b-when').focus();return;}
+    const trip={passenger:p.name,psNo:p.psNo||'',email:S.email,phone:p.phone,cadre:p.cadre||'',dept:p.dept||'',kind:k,from,to,when,pax:S.pax,note,
+      purpose:'',isName:'',isEmail:'',isPhone:'',prefVehicleId:v?v.id:'',prefPlate:v?v.plate:'',status:k==='site'?'requested':'is_pending',createdAt:Date.now(),createdBy:S.uid};
+    if(k==='outstation'){
+      const isName=$('#b-isname').value.trim(),isEmail=$('#b-isemail').value.trim().toLowerCase(),isPhone=$('#b-isphone').value.trim();
+      if(isName.length<2){err.textContent='Enter your immediate supervisor (IS) name.';$('#b-isname').focus();return;}
+      if(!isLntEmail(isEmail)){err.textContent="Enter your IS's @lntecc.com email. Only that person can approve.";$('#b-isemail').focus();return;}
+      if(isEmail===S.email){err.textContent='You cannot be your own IS.';$('#b-isemail').focus();return;}
+      if(digits(isPhone).length<10){err.textContent="Enter your IS's 10-digit WhatsApp number to send the approval link.";$('#b-isphone').focus();return;}
+      Object.assign(trip,{purpose:$('#b-purpose').value,isName,isEmail,isPhone});
+      const own=LS.get('profile:'+S.email,{})||{};LS.set('profile:'+S.email,Object.assign(own,{isName,isEmail,isPhone}));
+    }
+    const id=store.newId();S.lastBooked=id;
+    store.write([{c:'trips',id,set:trip}]);$('#b-note').value='';$('#b-other').value='';
+    if(!Alerts.on)Alerts.enable(true);
+    renderAll();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
+    toast(S.online?'Request sent.':'Saved on your phone. It is sent when the network is back.');
+  });
+}
+
+/* ---------- ride progress ---------- */
+function stepsOf(t){
+  const s=[{l:'Requested',at:t.createdAt}];
+  if(t.kind==='outstation')s.push({l:'IS approved',at:t.isDecision==='approved'?t.isDecidedAt:null});
+  s.push({l:'Driver assigned',at:t.assignedAt},{l:'On the way',at:t.startedAt},{l:'Reached',at:t.doneAt});
+  return s;
+}
+function stepBar(t){
+  if(t.status==='cancelled'||t.status==='rejected')return '';
+  const s=stepsOf(t),now=s.findIndex(x=>!x.at);
+  return `<div class="steps" style="grid-template-columns:repeat(${s.length},minmax(0,1fr))">${s.map((x,i)=>`<div class="${x.at?'done':i===now?'now':''}"><i></i><span>${x.l}</span><em>${x.at?fmtT(x.at):''}</em></div>`).join('')}</div>`;
+}
+function driverBox(t){
+  if(!t.plate)return '';
+  return `<div class="driver"><span class="avatar">${esc(initials(t.driver))}</span><div><b>${esc(t.driver||'Driver')}</b><span class="muted" style="font-size:13px">${plateHtml(t.plate)} ${esc(t.vehType||'')}${t.seats?' · '+esc(t.seats)+' seats':''}</span></div>${t.driverPhone?`<a class="btn call" href="${telLink(t.driverPhone)}">Call ${esc(first(t.driver)||'driver')}</a>`:''}</div>`;
+}
+function odoBox(t,which){
+  const key=(which==='s'?'odo-s-':'odo-e-')+t.id,v=S.draft[key]||'';
+  const label=which==='s'?'Speedometer reading now (km) · स्पीडोमीटर':'Speedometer at drop (km) · स्पीडोमीटर';
+  const ph=which==='s'?(t.lastOdo?String(t.lastOdo):'e.g. 45210'):'More than '+t.odoStart;
+  const btn=which==='s'?`<button class="btn primary big" data-act="start" data-id="${t.id}">Start ride<small>सवारी शुरू करें</small></button>`
+    :`<button class="btn primary big" data-act="end" data-id="${t.id}">I reached · end ride<small>पहुँच गए</small></button>`;
+  return `<div class="odo-wrap" data-card><label class="field"><span>${label}</span><input data-draft="${key}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="${esc(ph)}" value="${esc(v)}"></label>
+    <p class="hint">${which==='s'?'Look at the speedometer before the car moves and type the km shown.'+(t.lastOdo?' Last recorded for this vehicle: '+t.lastOdo+' km.':''):'Look at the speedometer at the drop point. Km for this ride is worked out from both readings.'}</p>${btn}</div>`;
+}
+function staffActions(t){
+  const C=k=>S.confirm===k,admin=S.cfg.adminPhone;
+  const cancel=`<button class="btn danger ${C('cancel:'+t.id)?'armed':''}" data-act="cancel" data-id="${t.id}">${C('cancel:'+t.id)?'Confirm cancel':'Cancel ride'}</button>`;
+  if(t.status==='is_pending')return `<div class="rule-note">Waiting for <b>${esc(t.isName||t.isEmail)}</b> to approve. Send them the link, or they can open the website and check <b>Approvals</b>.</div>
+    <div class="btn-row">${t.isPhone?`<a class="btn wa" href="${waLink(t.isPhone,isMsg(t))}" target="_blank" rel="noopener">Send to IS on WhatsApp</a>`:''}${admin?`<a class="btn" href="${waLink(admin,adminCopyMsg(t))}" target="_blank" rel="noopener">Copy to admin on WhatsApp</a>`:''}${cancel}</div>`;
+  if(t.status==='requested')return `<div class="rule-note">Waiting for the transport admin to approve${t.prefPlate?` · you asked for <b>${esc(t.prefPlate)}</b>`:''}.</div><div class="btn-row">${cancel}</div>`;
+  if(t.status==='assigned')return `${driverBox(t)}<div class="rule-note">Go to <b>${esc(t.from)}</b>${t.when?' by '+fmtT(t.when):' now'}. When the vehicle arrives, enter the speedometer reading and start the ride.</div>${odoBox(t,'s')}<div class="btn-row">${cancel}</div>`;
+  if(t.status==='onboard')return `${driverBox(t)}<p class="muted" style="margin:0">Start reading: <b class="mono">${t.odoStart}</b> km · started ${fmtT(t.startedAt)}</p>${odoBox(t,'e')}`;
+  if(t.status==='done')return `<div class="btn-row" style="justify-content:space-between"><span><span class="km-big">${t.km!=null?t.km:'–'}</span> <span class="muted">km · ${t.odoStart!=null?t.odoStart+' → '+t.odoEnd:'readings not entered'}</span></span>${t.issue?pill('Problem reported','bad'):`<button class="btn sm danger ${C('iss:'+t.id)?'armed':''}" data-act="issue" data-id="${t.id}">${C('iss:'+t.id)?'Confirm: report a problem':'Report a problem'}</button>`}</div>`;
+  if(t.status==='rejected')return `<div class="rule-note warn">Not approved${t.isNote?': '+esc(t.isNote):''}.</div>`;
+  return '';
+}
+function rideCard(t){
+  return `<div class="trip ${t.status==='assigned'?'hot':''}"><div class="trip-top"><div class="route-line">${esc(t.from)} <span class="arr">→</span> ${esc(t.to)}</div><div class="btn-row" style="gap:6px">${kindTag(t.kind)}${pill(st(t)[0],st(t)[1])}</div></div>
+    <div class="meta"><span>Booked ${fmtDT(t.createdAt)}</span><span class="ref">Ref ${ref(t)}</span>${t.when?`<span>Pickup ${fmtDT(t.when)}</span>`:''}<span>${t.pax||1} ${(+t.pax||1)>1?'people':'person'}</span>${syncTag(t)}</div>
+    ${stepBar(t)}${staffActions(t)}</div>`;
+}
+function histRow(t){
+  return `<div class="hist"><div><b>${esc(t.from)} → ${esc(t.to)}</b><div class="meta"><span>${fmtDT(t.createdAt)}</span>${t.plate?`<span>${esc(t.plate)}</span>`:''}${t.km!=null?`<span>${t.km} km</span>`:''}</div></div><div class="btn-row">${pill(st(t)[0],st(t)[1])}<a class="btn sm" href="#track-${esc(t.id)}">Open</a></div></div>`;
+}
+function renderSuccess(){
+  const t=S.lastBooked&&S.trips.get(S.lastBooked);
+  $('#book-form').hidden=!!t;$('#b-success').hidden=!t;if(!t)return;
+  const admin=S.cfg.adminPhone;
+  safeSet($('#b-success'),`<div class="success"><div class="tick">✓</div><h2>${t.kind==='outstation'?'Request saved':'Ride requested'}</h2>
+    <div class="meta"><span>${fmtDT(t.createdAt)}</span><span class="ref">Ref ${ref(t)}</span>${kindTag(t.kind)}${syncTag(t)}</div>
+    <div class="route-line">${esc(t.from)} <span class="arr">→</span> ${esc(t.to)}</div>
+    ${t.kind==='outstation'?`<p style="margin:0"><b>Next step:</b> send the approval link to your IS <b>${esc(t.isName)}</b>. After approval the admin assigns a vehicle.</p>
+      <a class="btn wa big" href="${waLink(t.isPhone,isMsg(t))}" target="_blank" rel="noopener">Send to my IS on WhatsApp<small>अपने IS को व्हाट्सएप करें</small></a>
+      <div class="btn-row"><a class="btn" href="${smsLink(t.isPhone,isMsg(t))}">Send by SMS instead</a>${admin?`<a class="btn" href="${waLink(admin,adminCopyMsg(t))}" target="_blank" rel="noopener">Copy to admin on WhatsApp</a>`:''}</div>`
+    :`<p style="margin:0">The transport admin sees your request on the website. Your driver's name, vehicle and number show under <b>Current ride</b> once approved${Alerts.on&&'Notification' in window&&Notification.permission==='granted'?', and this phone rings':''}.</p>`}
+    <div class="btn-row"><button class="btn primary" data-act="bookagain">Book another ride</button></div></div>`);
+}
+function renderRide(){
+  syncBook();renderSuccess();
+  const mine=allTrips().filter(t=>t.createdBy===S.uid).sort((a,b)=>b.createdAt-a.createdAt);
+  const act=mine.filter(t=>ACTIVE.includes(t.status));
+  safeSet($('#cur-list'),act.length?act.map(rideCard).join(''):`<div class="empty">No ride right now. Choose where you are going and request a ride.</div>`);
+  const hist=mine.filter(t=>!ACTIVE.includes(t.status)).slice(0,15);
+  safeSet($('#hist-list'),hist.length?hist.map(histRow).join(''):`<div class="empty">Your past rides show here.</div>`);
+}
+
+/* ---------- approvals (IS) ---------- */
+function personLine(t){return `<div class="meta"><b style="color:var(--ink)">${esc(t.passenger)}</b>${t.cadre?`<span>${esc(t.cadre)}</span>`:''}${t.dept?`<span>${esc(t.dept)}</span>`:''}${t.psNo?`<span class="mono">PS ${esc(t.psNo)}</span>`:''}${t.phone?`<a href="${telLink(t.phone)}" class="mono">${esc(t.phone)}</a>`:''}</div>`;}
+function isCard(t){
+  const C=k=>S.confirm===k;
+  let body='';
+  if(t.status==='is_pending'){
+    if(t.isEmail!==S.email)body=`<div class="rule-note warn">Only <b>${esc(t.isEmail)}</b> can approve this. You are signed in as ${esc(S.email)}.</div>`;
+    else body=`<div data-card style="display:flex;flex-direction:column;gap:10px"><label class="field"><span>Reason, if not approving</span><input data-draft="isn-${t.id}" value="${esc(S.draft['isn-'+t.id]||'')}" placeholder="Optional"></label>
+      <div class="btn-row"><button class="btn primary" data-act="isok" data-id="${t.id}">Approve · मंज़ूर</button><button class="btn danger ${C('isno:'+t.id)?'armed':''}" data-act="isno" data-id="${t.id}">${C('isno:'+t.id)?'Confirm: not approved':'Not approved'}</button></div></div>`;
+  }else if(t.isDecision==='approved'){
+    body=`<div class="rule-note">Approved ${fmtDT(t.isDecidedAt)}.</div><div class="btn-row">${t.status==='requested'&&S.cfg.adminPhone?`<a class="btn wa" href="${waLink(S.cfg.adminPhone,adminAfterIsMsg(t))}" target="_blank" rel="noopener">Tell the admin on WhatsApp</a>`:''}${t.phone?`<a class="btn" href="${waLink(t.phone,staffIsResultMsg(t,true))}" target="_blank" rel="noopener">Tell ${esc(first(t.passenger))}</a>`:''}</div>`;
+  }else if(t.isDecision==='rejected'){
+    body=`<div class="rule-note warn">Not approved${t.isNote?': '+esc(t.isNote):''}.</div>${t.phone?`<div class="btn-row"><a class="btn" href="${waLink(t.phone,staffIsResultMsg(t,false))}" target="_blank" rel="noopener">Tell ${esc(first(t.passenger))}</a></div>`:''}`;
+  }
+  return `<div class="trip ${t.status==='is_pending'?'hot':''}"><div class="trip-top"><div class="route-line">${esc(t.from)} <span class="arr">→</span> ${esc(t.to)}</div>${pill(st(t)[0],st(t)[1])}</div>
+    ${personLine(t)}
+    <div class="meta"><span>Purpose: <b>${esc(t.purpose||'-')}</b></span><span>When: <b>${t.when?fmtDT(t.when):'Now'}</b></span><span>${t.pax||1} ${(+t.pax||1)>1?'people':'person'}</span><span>Asked ${fmtDT(t.createdAt)}</span><span class="ref">Ref ${ref(t)}</span>${syncTag(t)}</div>
+    ${t.note?`<div class="note">${esc(t.note)}</div>`:''}${body}</div>`;
+}
+const isQueue=()=>allTrips().filter(t=>t.isEmail===S.email&&t.isEmail);
+function renderApprovals(){
+  const ts=isQueue().sort((a,b)=>((a.status==='is_pending'?0:1)-(b.status==='is_pending'?0:1))||(b.createdAt-a.createdAt)).slice(0,40);
+  safeSet($('#ap-list'),ts.length?ts.map(isCard).join(''):`<div class="empty">No approvals for you. When someone names you as their IS, the request shows here.</div>`);
+}
+
+/* ---------- dispatch (admin) ---------- */
+function vehOptions(t){
+  const vs=[...S.vehicles.values()],from=t.from,pax=+t.pax||1;
+  const free=freeVehicles(from,pax),rest=vs.filter(v=>(v.status||'free')!=='free').sort((a,b)=>String(a.plate).localeCompare(String(b.plate)));
+  let sel=S.asSel[t.id];
+  if(!sel||!S.vehicles.has(sel))sel=(t.prefVehicleId&&free.some(v=>v.id===t.prefVehicleId))?t.prefVehicleId:(free[0]?free[0].id:'');
+  const opt=v=>`<option value="${esc(v.id)}"${v.id===sel?' selected':''}>${esc(vehLabel(v))}${(v.status||'free')!=='free'?' · '+VST[v.status||'free'][0].toUpperCase():''}${v.id===t.prefVehicleId?' · asked for':''}</option>`;
+  return (free.length?`<optgroup label="Free now">${free.map(opt).join('')}</optgroup>`:'<option value="">No free vehicle</option>')+(rest.length?`<optgroup label="Busy / not available">${rest.map(opt).join('')}</optgroup>`:'');
+}
+function reqCard(t){
+  const C=k=>S.confirm===k,now=Date.now();
+  return `<div class="trip ${t.kind==='outstation'?'':'hot'}" data-card><div class="trip-top"><div class="route-line">${esc(t.from)} <span class="arr">→</span> ${esc(t.to)}</div>${kindTag(t.kind)}</div>
+    ${personLine(t)}
+    <div class="meta"><span>${t.when?'Pickup <b>'+fmtDT(t.when)+'</b>':'Now · waiting '+dur(mins(now-t.createdAt))}</span><span>${t.pax||1} ${(+t.pax||1)>1?'people':'person'}</span>${t.kind==='outstation'?pill('IS approved · '+(t.isName||t.isBy||''),'ok')+`<span>${esc(t.purpose||'')}</span>`:''}${t.prefPlate?`<span>Asked for <b>${esc(t.prefPlate)}</b></span>`:''}<span class="ref">Ref ${ref(t)}</span></div>
+    ${t.note?`<div class="note">${esc(t.note)}</div>`:''}
+    <div class="assign-row"><label class="field"><span>Vehicle and driver</span><select data-as="${t.id}">${vehOptions(t)}</select></label>
+    <div class="btn-row"><button class="btn primary ${C('as:'+t.id)?'armed':''}" data-act="assign" data-id="${t.id}">${C('as:'+t.id)?'Vehicle is busy · assign anyway':'Approve & assign'}</button><button class="btn danger ${C('rej:'+t.id)?'armed':''}" data-act="reject" data-id="${t.id}">${C('rej:'+t.id)?'Confirm: not approved':'Not approved'}</button></div></div></div>`;
+}
+function moveCard(t){
+  const C=k=>S.confirm===k;
+  return `<div class="trip"><div class="trip-top"><div class="route-line">${esc(t.from)} <span class="arr">→</span> ${esc(t.to)}</div>${pill(st(t)[0],st(t)[1])}</div>
+    ${personLine(t)}${driverBox(t)}${stepBar(t)}
+    <div class="meta">${t.when?`<span>Pickup ${fmtDT(t.when)}</span>`:''}<span>Assigned ${fmtT(t.assignedAt)}</span>${t.odoStart!=null?`<span>Start <b class="mono">${t.odoStart}</b> km</span>`:''}${syncTag(t)}</div>
+    <details><summary style="cursor:pointer;font-size:13.5px;font-weight:600">Enter readings for the staff member</summary><div style="padding-top:10px">${t.status==='assigned'?odoBox(t,'s'):odoBox(t,'e')}</div></details>
+    <div class="btn-row">${t.driverPhone?`<a class="btn wa" href="${waLink(t.driverPhone,driverMsg(t))}" target="_blank" rel="noopener">Send trip to driver</a>`:''}${t.status==='assigned'?`<button class="btn danger ${C('unas:'+t.id)?'armed':''}" data-act="unassign" data-id="${t.id}">${C('unas:'+t.id)?'Confirm unassign':'Unassign'}</button>`:''}</div></div>`;
+}
+function renderDispatch(){
+  const all=allTrips(),now=Date.now(),d0=dayStart();
+  $('#d-alert').className='alertbar'+(Alerts.on?' on':'');
+  $('#d-alert').innerHTML=Alerts.on?'<span><b>Alerts on.</b> This phone rings for every new request while this page is open.</span>':'<span>Turn on alerts so this phone rings for every new ride request.</span><button class="btn primary" data-act="alerts">Turn on alerts</button>';
+  $('#d-notice').innerHTML=S.notices.map(id=>{const t=S.trips.get(id);if(!t||t.status!=='assigned')return '';
+    return `<div class="notice"><div class="panel-h"><h3>${esc(t.plate)} assigned to ${esc(t.passenger)}</h3><button class="btn sm" data-act="closenotice" data-id="${t.id}">Done</button></div>
+    <div class="meta"><span>${esc(t.from)} → ${esc(t.to)}</span><span>Driver ${esc(t.driver||'')}</span></div>
+    <div class="btn-row">${t.driverPhone?`<a class="btn wa" href="${waLink(t.driverPhone,driverMsg(t))}" target="_blank" rel="noopener">Send trip to driver (optional)</a><a class="btn call" href="${telLink(t.driverPhone)}">Call driver</a>`:'<span class="muted">No driver mobile saved.</span>'}</div>
+    <p class="hint">The staff member already sees the driver on the website.</p></div>`;}).join('');
+  const req=all.filter(t=>t.status==='requested').sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
+  const isP=all.filter(t=>t.status==='is_pending').sort((a,b)=>a.createdAt-b.createdAt);
+  const mv=all.filter(t=>t.status==='assigned'||t.status==='onboard').sort((a,b)=>(a.assignedAt||0)-(b.assignedAt||0));
+  const done=all.filter(t=>t.status==='done'&&(t.doneAt||0)>=d0).sort((a,b)=>b.doneAt-a.doneAt);
+  const vs=[...S.vehicles.values()],cnt=s=>vs.filter(v=>(v.status||'free')===s).length;
+  const kmToday=done.reduce((s,t)=>s+(+t.km||0),0);
+  $('#d-kpis').innerHTML=[['Waiting for you',req.length,'Ride requests',req.length>0],['Waiting for IS',isP.length,'Long distance',false],
+    ['Free vehicles',`${cnt('free')}<small style="font-size:16px"> / ${vs.length}</small>`,`${cnt('break')+cnt('off')} on break or off`,cnt('free')===0&&req.length>0],
+    ['On the move',mv.length,`${cnt('assigned')} assigned · ${cnt('on_trip')} on trip`,false],['Done today',done.length,'Rides completed',false],
+    ['Km today',kmToday.toLocaleString('en-IN'),`${done.filter(t=>t.km==null).length} without readings`,false]]
+    .map(([l,v,s,a])=>`<div class="kpi ${a?'alert':''}"><span>${l}</span><b>${v}</b><small>${s}</small></div>`).join('');
+  safeSet($('#d-req'),req.length?req.map(reqCard).join(''):'<div class="empty">No ride requests waiting.</div>');
+  safeSet($('#d-is'),isP.length?isP.map(t=>{const C=k=>S.confirm===k;return `<div class="trip"><div class="trip-top"><div class="route-line">${esc(t.from)} <span class="arr">→</span> ${esc(t.to)}</div>${pill('Waiting '+dur(mins(now-t.createdAt)),'sig')}</div>${personLine(t)}
+    <div class="meta"><span>IS <b>${esc(t.isName||'')}</b> · ${esc(t.isEmail)}</span><span>${t.when?'Leaves '+fmtDT(t.when):''}</span></div>
+    <div class="btn-row">${t.isPhone?`<a class="btn wa" href="${waLink(t.isPhone,isMsg(t))}" target="_blank" rel="noopener">Remind IS</a>`:''}<button class="btn ${C('iso:'+t.id)?'armed':''}" data-act="isoverride" data-id="${t.id}">${C('iso:'+t.id)?'Confirm: IS approved on phone':'IS approved on phone'}</button><button class="btn danger ${C('rej:'+t.id)?'armed':''}" data-act="reject" data-id="${t.id}">${C('rej:'+t.id)?'Confirm: not approved':'Not approved'}</button></div></div>`;}).join(''):'<div class="empty">Nothing waiting for IS approval.</div>');
+  safeSet($('#d-move'),mv.length?mv.map(moveCard).join(''):'<div class="empty">No vehicles on a ride.</div>');
+  renderFleet();
+  safeSet($('#d-done'),done.length?`<div class="tbl-wrap"><table><thead><tr><th>Reached</th><th>Passenger</th><th>Route</th><th>Vehicle</th><th>Driver</th><th class="r">Start</th><th class="r">End</th><th class="r">Km</th><th></th></tr></thead><tbody>${done.map(t=>`<tr><td class="num">${fmtT(t.doneAt)}</td><td>${esc(t.passenger)}</td><td>${esc(t.from)} → ${esc(t.to)}</td><td>${plateHtml(t.plate)}</td><td>${esc(t.driver||'')}</td><td class="r num">${t.odoStart!=null?t.odoStart:'–'}</td><td class="r num">${t.odoEnd!=null?t.odoEnd:'–'}</td><td class="r num"><b>${t.km!=null?t.km:'–'}</b></td><td>${t.issue?pill('Problem','bad'):''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No rides completed today.</div>');
+}
+function renderFleet(){
+  const vs=[...S.vehicles.values()],q=S.vehQ.toLowerCase();
+  const F=[['all','All'],['free','Free'],['assigned','Assigned'],['on_trip','On trip'],['break','On break'],['off','Off duty']];
+  $('#d-vfilter').innerHTML=F.map(([k,l])=>`<button class="chip" data-act="vfilter" data-v="${k}" aria-pressed="${S.vehF===k}">${l} <span class="num">${k==='all'?vs.length:vs.filter(v=>(v.status||'free')===k).length}</span></button>`).join('');
+  const list=vs.filter(v=>(S.vehF==='all'||(v.status||'free')===S.vehF)&&(!q||[v.plate,v.driver,v.driverPhone,v.at,v.type].join(' ').toLowerCase().includes(q))).sort((a,b)=>String(a.plate).localeCompare(String(b.plate)));
+  const trip=v=>v.tripId?S.trips.get(v.tripId):null;
+  safeSet($('#d-fleet'),vs.length?`<div class="tbl-wrap tall"><table><thead><tr><th>Vehicle</th><th>Driver</th><th>Mobile</th><th>Type</th><th class="r">Seats</th><th>At</th><th>Status</th><th>Ride</th><th class="r">Last km</th><th>Set status</th></tr></thead><tbody>${list.map(v=>{const s=v.status||'free',t=trip(v);
+    return `<tr><td>${plateHtml(v.plate)}${v.sample?' <span class="tag">Sample</span>':''}</td><td>${esc(v.driver||'')}</td><td>${v.driverPhone?`<a class="mono" href="${telLink(v.driverPhone)}">${esc(v.driverPhone)}</a>`:''}</td><td>${esc(v.type||'')}</td><td class="r num">${esc(v.seats||'')}</td><td>${esc(v.at||'')}</td><td>${pill(VST[s]?VST[s][0]:s,VST[s]?VST[s][1]:'')}</td><td>${t&&ACTIVE.includes(t.status)?esc(t.passenger)+' · '+esc(t.to):''}</td><td class="r num">${v.lastOdo||''}</td>
+    <td><div class="btn-row" style="flex-wrap:nowrap">${['free','break','off'].map(x=>`<button class="btn sm" data-act="vset" data-vid="${esc(v.id)}" data-st="${x}" ${s===x?'disabled':''}>${VST[x][0]}</button>`).join('')}</div></td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty">No vehicles yet. Upload the vehicle list under Setup.</div>');
+  $('#d-fleet-sub').textContent=`${vs.length} vehicles. Set break or off duty here; free vehicles show to staff when booking.`;
+}
+
+/* ---------- records ---------- */
+const rangeTrips=()=>{const s=rangeSince();return allTrips().filter(t=>(t.createdAt||0)>=s);};
+const dayKey=ms=>{const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const dayLabel=k=>{const p=k.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
+const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
+function kmData(){
+  const done=rangeTrips().filter(t=>t.status==='done'&&t.doneAt);
+  const days=new Map(),veh=new Map();
+  done.forEach(t=>{
+    const vk=t.vehicleId||t.plate||'?',dk=dayKey(t.doneAt)+'|'+vk;
+    const d=days.get(dk)||{day:dayKey(t.doneAt),plate:t.plate||'',driver:t.driver||'',driverPhone:t.driverPhone||'',rides:0,people:0,km:0,missing:0,first:null,last:null};
+    const v=veh.get(vk)||{plate:t.plate||'',driver:t.driver||'',driverPhone:t.driverPhone||'',dates:new Set(),rides:0,people:0,km:0,missing:0};
+    [d,v].forEach(r=>{r.rides++;r.people+=(+t.pax||1);if(t.km!=null)r.km+=+t.km;else r.missing++;});
+    if(t.odoStart!=null&&(d.first==null||t.odoStart<d.first))d.first=t.odoStart;
+    if(t.odoEnd!=null&&(d.last==null||t.odoEnd>d.last))d.last=t.odoEnd;
+    v.dates.add(d.day);days.set(dk,d);veh.set(vk,v);
+  });
+  return {days:[...days.values()].sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:String(a.plate).localeCompare(b.plate)),
+    veh:[...veh.values()].map(v=>Object.assign(v,{days:v.dates.size,perDay:v.dates.size?Math.round(v.km/v.dates.size):0})).sort((a,b)=>b.km-a.km)};
+}
+function renderRecords(){
+  document.querySelectorAll('#r-range .chip').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.range===S.range)));
+  const ts=rangeTrips(),done=ts.filter(t=>t.status==='done'),rate=+S.cfg.ratePerKm||0;
+  const waits=ts.filter(t=>t.assignedAt&&t.kind==='site').map(t=>mins(t.assignedAt-Math.max(t.createdAt,t.when||0)));
+  const km=done.reduce((s,t)=>s+(+t.km||0),0);
+  $('#r-kpis').innerHTML=[['Rides booked',ts.length,`${ts.filter(t=>t.kind==='outstation').length} long distance`],['Completed',done.length,`${ts.filter(t=>t.status==='cancelled').length} cancelled · ${ts.filter(t=>t.status==='rejected').length} not approved`],
+    ['Km travelled',km.toLocaleString('en-IN'),`${done.filter(t=>t.km==null).length} rides without readings`],['Wait for approval',waits.length?Math.round(avg(waits))+'<small style="font-size:16px"> min</small>':'–','Request to driver assigned'],
+    ['Problems reported',ts.filter(t=>t.issue).length,'From staff'],...(rate?[['Driver amount','₹ '+Math.round(km*rate).toLocaleString('en-IN'),`At ₹${rate} per km`]]:[])]
+    .map(([l,v,s])=>`<div class="kpi"><span>${l}</span><b>${v}</b><small>${s}</small></div>`).join('');
+  const {days,veh}=kmData(),money=k=>rate?'₹ '+Math.round(k*rate).toLocaleString('en-IN'):'';
+  $('#r-veh').innerHTML=veh.length?`<div class="tbl-wrap"><table><thead><tr><th>Vehicle</th><th>Driver</th><th class="r">Days</th><th class="r">Rides</th><th class="r">People</th><th class="r">Km</th><th class="r">Km / day</th>${rate?'<th class="r">Amount</th>':''}<th class="r">No readings</th></tr></thead><tbody>${veh.map(v=>`<tr><td>${plateHtml(v.plate)}</td><td>${esc(v.driver)} <span class="muted mono">${esc(v.driverPhone)}</span></td><td class="r num">${v.days}</td><td class="r num">${v.rides}</td><td class="r num">${v.people}</td><td class="r num"><b>${v.km}</b></td><td class="r num">${v.perDay}</td>${rate?`<td class="r num">${money(v.km)}</td>`:''}<td class="r">${v.missing?pill(v.missing,'warn'):'0'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No completed rides in this period.</div>';
+  $('#r-day').innerHTML=days.length?`<div class="tbl-wrap tall"><table><thead><tr><th>Date</th><th>Vehicle</th><th>Driver</th><th class="r">Rides</th><th class="r">First reading</th><th class="r">Last reading</th><th class="r">Km</th>${rate?'<th class="r">Amount</th>':''}</tr></thead><tbody>${days.map(d=>`<tr><td class="num">${dayLabel(d.day)}</td><td>${plateHtml(d.plate)}</td><td>${esc(d.driver)}</td><td class="r num">${d.rides}</td><td class="r num">${d.first!=null?d.first:'–'}</td><td class="r num">${d.last!=null?d.last:'–'}</td><td class="r num"><b>${d.km}</b></td>${rate?`<td class="r num">${money(d.km)}</td>`:''}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">No day-wise km yet.</div>';
+  const q=S.logQ.toLowerCase();
+  const rows=ts.filter(t=>!q||[t.passenger,t.psNo,t.email,t.from,t.to,t.plate,t.driver,ref(t)].join(' ').toLowerCase().includes(q)).sort((a,b)=>b.createdAt-a.createdAt);
+  $('#r-log').innerHTML=rows.length?`<div class="tbl-wrap tall"><table><thead><tr><th>Ref</th><th>Booked</th><th>Passenger</th><th>Type</th><th>Route</th><th>Vehicle</th><th>Driver</th><th>Assigned</th><th>Started</th><th>Reached</th><th class="r">Km</th><th>Status</th></tr></thead><tbody>${rows.slice(0,300).map(t=>`<tr><td class="ref"><a href="#track-${esc(t.id)}">${ref(t)}</a></td><td class="num">${fmtD(t.createdAt)} ${fmtT(t.createdAt)}</td><td>${esc(t.passenger)}</td><td>${t.kind==='outstation'?'Long distance':'Site'}</td><td>${esc(t.from)} → ${esc(t.to)}</td><td>${plateHtml(t.plate)}</td><td>${esc(t.driver||'')}</td><td class="num">${t.assignedAt?fmtT(t.assignedAt):''}</td><td class="num">${t.startedAt?fmtT(t.startedAt):''}</td><td class="num">${t.doneAt?fmtT(t.doneAt):''}</td><td class="r num">${t.km!=null?t.km:''}</td><td>${pill(st(t)[0],st(t)[1])}</td></tr>`).join('')}</tbody></table></div>${rows.length>300?`<p class="hint">Showing 300 of ${rows.length}. Download Excel for all.</p>`:''}`:'<div class="empty">No rides match.</div>';
+}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+const XLSX_URL='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+async function exportExcel(){
+  if(db)await loadHist(true);
+  const D=ms=>ms?new Date(ms).toLocaleDateString('en-GB'):'',T=ms=>ms?fmtT(ms):'';
+  const rides=[['Ref','Booked date','Booked time','Passenger','PS no','Email','Mobile','Cadre','Department','People','Type','From','To','Pickup time asked','Purpose','IS name','IS email','IS decision','IS decided at','Status','Vehicle','Driver','Driver mobile','Assigned at','Started at','Reached at','Speedometer start','Speedometer end','Km','Problem','Note']]
+    .concat(rangeTrips().sort((a,b)=>a.createdAt-b.createdAt).map(t=>[ref(t),D(t.createdAt),T(t.createdAt),t.passenger||'',t.psNo||'',t.email||'',t.phone||'',t.cadre||'',t.dept||'',+t.pax||1,t.kind==='outstation'?'Long distance':'Within site',t.from||'',t.to||'',t.when?D(t.when)+' '+T(t.when):'',t.purpose||'',t.isName||'',t.isEmail||'',t.isDecision||'',t.isDecidedAt?D(t.isDecidedAt)+' '+T(t.isDecidedAt):'',st(t)[0],t.plate||'',t.driver||'',t.driverPhone||'',T(t.assignedAt),T(t.startedAt),T(t.doneAt),t.odoStart!=null?t.odoStart:'',t.odoEnd!=null?t.odoEnd:'',t.km!=null?t.km:'',t.issue?'Yes':'',t.note||'']));
+  const {days,veh}=kmData(),rate=+S.cfg.ratePerKm||0,amt=k=>rate?Math.round(k*rate):'';
+  const vs=[['Vehicle','Driver','Driver mobile','Days','Rides','People','Km','Km per day','Rides without readings','Amount (INR)']].concat(veh.map(v=>[v.plate,v.driver,v.driverPhone,v.days,v.rides,v.people,v.km,v.perDay,v.missing,amt(v.km)]));
+  const ds=[['Date','Vehicle','Driver','Driver mobile','Rides','People','First reading','Last reading','Km','Rides without readings','Amount (INR)']].concat(days.map(d=>[dayLabel(d.day),d.plate,d.driver,d.driverPhone,d.rides,d.people,d.first!=null?d.first:'',d.last!=null?d.last:'',d.km,d.missing,amt(d.km)]));
+  const name=`Dholera-transport-${S.range}-${new Date().toISOString().slice(0,10)}`;
+  try{
+    if(!window.XLSX){toast('Preparing Excel…');await loadScript(XLSX_URL);}
+    const wb=XLSX.utils.book_new();
+    [['Rides',rides],['Km per vehicle',vs],['Km per day',ds]].forEach(([n,data])=>{const sh=XLSX.utils.aoa_to_sheet(data);sh['!cols']=data[0].map((h,i)=>({wch:Math.min(36,Math.max(String(h).length,...data.slice(1).map(r=>String(r[i]==null?'':r[i]).length))+2)}));XLSX.utils.book_append_sheet(wb,sh,n);});
+    XLSX.writeFile(wb,name+'.xlsx');toast(`Excel downloaded: ${rides.length-1} rides.`);
+  }catch(e){
+    const cell=x=>{const s=String(x==null?'':x);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+    const url=URL.createObjectURL(new Blob(['\ufeff'+rides.map(r=>r.map(cell).join(',')).join('\n')],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');a.href=url;a.download=name+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+    toast('Downloaded as CSV. It opens in Excel.');
+  }
+}
+
+/* ---------- setup (admin): uploads ---------- */
+const cellStr=v=>typeof v==='number'?String(Math.round(v)):String(v==null?'':v).trim();
+function parseCsvLine(l){const out=[];let cur='',q=false;for(let i=0;i<l.length;i++){const c=l[i];if(q){if(c==='"'&&l[i+1]==='"'){cur+='"';i++;}else if(c==='"')q=false;else cur+=c;}else if(c==='"')q=true;else if(c===','){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out;}
+function readFileAs(f,how){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);how==='buf'?r.readAsArrayBuffer(f):r.readAsText(f);});}
+async function readSheet(file){
+  if(/\.(xlsx|xlsm|xls|ods)$/i.test(file.name||'')){
+    if(!window.XLSX)await loadScript(XLSX_URL);
+    const wb=XLSX.read(await readFileAs(file,'buf'),{type:'array'});
+    return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
+  }
+  return String(await readFileAs(file,'text')).replace(/^\ufeff/,'').split(/\r?\n/).map(l=>l.includes('\t')?l.split('\t'):parseCsvLine(l));
+}
+const norm=x=>String(x==null?'':x).toLowerCase().replace(/[^a-z]+/g,' ').trim();
+const nonEmpty=a=>(a||[]).filter(r=>Array.isArray(r)&&r.some(c=>cellStr(c)!==''));
+function staffRows(aoa){
+  const rows=nonEmpty(aoa);if(!rows.length)return {rows:[],bad:0};
+  const h=rows[0].map(norm),f=fn=>h.findIndex(fn);
+  const isIS=x=>/\bis\b|supervisor|immediate|reporting/.test(x),mail=x=>/mail/.test(x),ph=x=>/phone|mobile|whatsapp|contact|cell/.test(x);
+  const m={isEmail:f(x=>isIS(x)&&mail(x)),isPhone:f(x=>isIS(x)&&ph(x)),isName:f(x=>isIS(x)&&!mail(x)&&!ph(x)),email:f(x=>mail(x)&&!isIS(x)),
+    ps:f(x=>/\bps\b|\bemp|personnel|\bid\b|\bcode\b|staff no/.test(x)&&!isIS(x)&&!/name|mail/.test(x)),name:f(x=>/name/.test(x)&&!isIS(x)),
+    cadre:f(x=>/cadre|grade|level/.test(x)),dept:f(x=>/dept|department|section/.test(x)),mobile:f(x=>ph(x)&&!isIS(x))};
+  let start=1;if(m.email<0){Object.assign(m,{ps:0,name:1,email:2,cadre:3,dept:4,mobile:5,isName:6,isEmail:7,isPhone:8});start=isLntEmail(cellStr(rows[0][2]))?0:1;}
+  const out=new Map();let bad=0;
+  rows.slice(start).forEach(r=>{const g=k=>m[k]>=0&&r[m[k]]!=null?cellStr(r[m[k]]):'';
+    const email=g('email').toLowerCase(),name=g('name').replace(/\s+/g,' ');
+    if(!isLntEmail(email)||!name){bad++;return;}
+    const cad=g('cadre').toUpperCase().replace(/\s+/g,'');
+    out.set(email,{email,psNo:g('ps'),name,cadre:CADRES.includes(cad)?cad:g('cadre'),dept:g('dept'),mobile:g('mobile'),isName:g('isName'),isEmail:g('isEmail').toLowerCase(),isPhone:g('isPhone')});});
+  return {rows:[...out.values()],bad};
+}
+function vehicleRows(aoa){
+  const rows=nonEmpty(aoa);if(!rows.length)return {rows:[],bad:0};
+  const h=rows[0].map(norm),f=fn=>h.findIndex(fn),ph=x=>/phone|mobile|whatsapp|contact|cell/.test(x);
+  const m={driverPhone:f(x=>ph(x)),driver:f(x=>/driver/.test(x)&&!ph(x)),seats:f(x=>/seat|capacity/.test(x)),type:f(x=>/type|model|make/.test(x)),
+    at:f(x=>/park|location|base|stand/.test(x)),plate:f(x=>/plate|vehicle|reg|\bno\b|number/.test(x)&&!/driver|type|seat/.test(x)&&!ph(x))};
+  let start=1;if(m.plate<0){Object.assign(m,{plate:0,type:1,seats:2,driver:3,driverPhone:4,at:5});start=vehId(cellStr(rows[0][0])).length>=6&&/\d/.test(cellStr(rows[0][0]))?0:1;}
+  const out=new Map();let bad=0;
+  rows.slice(start).forEach(r=>{const g=k=>m[k]>=0&&r[m[k]]!=null?cellStr(r[m[k]]):'';
+    const plate=g('plate').toUpperCase().replace(/\s+/g,' ').trim(),id=vehId(plate);
+    if(id.length<4){bad++;return;}
+    const at=g('at');
+    out.set(id,{id,plate,type:g('type'),seats:Math.max(1,parseInt(g('seats'),10)||4),driver:g('driver'),driverPhone:g('driverPhone'),at:at||S.cfg.stops[0]});});
+  return {rows:[...out.values()],bad};
+}
+async function importFile(kindOf,file){
+  const msg=$(kindOf==='veh'?'#veh-msg':'#dir-msg');msg.textContent='Reading the file…';
+  try{
+    const aoa=await readSheet(file);
+    if(kindOf==='veh'){
+      const {rows,bad}=vehicleRows(aoa);if(!rows.length){msg.textContent='No vehicles found. The first row needs headings such as Vehicle no and Driver name.';return;}
+      const ops=rows.map(v=>{const o={plate:v.plate,type:v.type,seats:v.seats,driver:v.driver,driverPhone:v.driverPhone,at:v.at};if(!S.vehicles.has(v.id))o.status='free';return {c:'vehicles',id:v.id,set:o,merge:true};});
+      await store.write(ops);msg.textContent=`Saved ${rows.length} vehicles${bad?` · ${bad} rows skipped (no vehicle no.)`:''}.`;
+    }else{
+      const {rows,bad}=staffRows(aoa);if(!rows.length){msg.textContent='No staff found. Each row needs a name and an @lntecc.com email.';return;}
+      await store.write(rows.map(p=>({c:'directory',id:p.email,set:p})));msg.textContent=`Saved ${rows.length} staff${bad?` · ${bad} rows skipped (no @lntecc.com email or name)`:''}.`;
+    }
+  }catch(e){console.error(e);msg.textContent='Could not save this file. Save it as .xlsx or .csv and try again (needs internet).';}
+}
+function qrSvg(text){try{if(!window.qrcode)return '';const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:4,margin:2,scalable:true});}catch(e){return '';}}
+function renderSetup(){
+  const setv=(s,v)=>{if(document.activeElement!==$(s))$(s).value=v;};
+  setv('#s-phone',S.cfg.adminPhone||'');setv('#s-rate',S.cfg.ratePerKm||'');setv('#s-managers',(S.cfg.managers||[]).join(', '));
+  fillSelect($('#v-at'),S.cfg.stops);
+  const vs=[...S.vehicles.values()].sort((a,b)=>String(a.plate).localeCompare(String(b.plate)));
+  $('#f-veh-count').textContent=vs.length+' vehicles';
+  safeSet($('#f-veh'),vs.length?`<div class="tbl-wrap tall"><table><thead><tr><th>Vehicle</th><th>Type</th><th class="r">Seats</th><th>Driver</th><th>Mobile</th><th>Parked at</th><th>Status</th><th></th></tr></thead><tbody>${vs.map(v=>`<tr><td>${plateHtml(v.plate)}${v.sample?' <span class="tag">Sample</span>':''}</td><td>${esc(v.type||'')}</td><td class="r num">${esc(v.seats||'')}</td><td>${esc(v.driver||'')}</td><td class="mono">${esc(v.driverPhone||'')}</td><td>${esc(v.at||'')}</td><td>${pill(VST[v.status||'free']?VST[v.status||'free'][0]:v.status,VST[v.status||'free']?VST[v.status||'free'][1]:'')}</td><td><button class="btn sm danger ${S.confirm==='vdel:'+v.id?'armed':''}" data-act="vdel" data-vid="${esc(v.id)}">${S.confirm==='vdel:'+v.id?'Confirm remove':'Remove'}</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No vehicles yet. Upload the list above.</div>');
+  const dq=S.dirQ.toLowerCase(),dl=[...S.dir.values()].filter(p=>!dq||[p.email,p.name,p.psNo,p.isName,p.isEmail].join(' ').toLowerCase().includes(dq)).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  $('#f-dir-count').textContent=S.dir.size+' staff';
+  safeSet($('#f-dir'),S.dir.size?`<div class="tbl-wrap tall"><table><thead><tr><th>Name</th><th>Email</th><th>PS no.</th><th>Cadre</th><th>Dept</th><th>Mobile</th><th>IS</th><th>IS email</th><th>IS WhatsApp</th><th></th></tr></thead><tbody>${dl.slice(0,200).map(p=>`<tr><td>${esc(p.name)}${p.sample?' <span class="tag">Sample</span>':''}</td><td>${esc(p.email||p.id)}</td><td class="mono">${esc(p.psNo||'')}</td><td>${esc(p.cadre||'')}</td><td>${esc(p.dept||'')}</td><td class="mono">${esc(p.mobile||'')}</td><td>${esc(p.isName||'')}</td><td>${esc(p.isEmail||'')}</td><td class="mono">${esc(p.isPhone||'')}</td><td><button class="btn sm danger ${S.confirm==='ddel:'+p.id?'armed':''}" data-act="ddel" data-id="${esc(p.id)}">${S.confirm==='ddel:'+p.id?'Confirm':'Remove'}</button></td></tr>`).join('')}</tbody></table></div>${dl.length>200?`<p class="hint">Showing 200 of ${dl.length}. Search to find others.</p>`:''}`:'<div class="empty">No staff list yet. Staff can still sign in and type their own details.</div>');
+  const chips=k=>S.cfg[k].map(s=>`<span>${esc(s)}<button data-act="delplace" data-k="${k}" data-name="${esc(s)}" aria-label="Remove ${esc(s)}">×</button></span>`).join('');
+  $('#f-stops').innerHTML=chips('stops');$('#f-outs').innerHTML=chips('outstation');
+  const base=pageUrl();
+  if($('#qr-box').dataset.sig!==base){$('#qr-box').dataset.sig=base;$('#qr-box').innerHTML=`<div class="qr-card"><h3>Book a vehicle</h3><b>Dholera Site Transport</b>${qrSvg(base)}<span>Scan · स्कैन करें · L&amp;T email sign-in</span><small>${esc(base)}</small></div>`;}
+  const hasSample=[...S.vehicles.values()].some(v=>v.sample)||allTrips().some(t=>t.sample)||[...S.dir.values()].some(p=>p.sample);
+  $('#btn-sample').hidden=hasSample||S.mode!=='live';$('#btn-clear').hidden=!hasSample;
+  $('#btn-clear').classList.toggle('armed',S.confirm==='clearsample');$('#btn-clear').textContent=S.confirm==='clearsample'?'Confirm: remove all sample data':'Remove sample data';
+}
+
+/* ---------- pages opened from a WhatsApp link ---------- */
+function renderFocus(){
+  const el=$('#focus-body'),f=S.focus,t=f&&S.trips.get(f.id);
+  const back=`<div class="btn-row"><a class="btn" href="#ride">Back to the app</a></div>`;
+  if(!t){const msg=S.mode==='live'&&!S.focusLoaded?'Loading…':S.focusErr==='permission-denied'?(f.type==='approve'?`This approval is not for <b>${esc(S.email)}</b>. Sign out and sign in with the IS email named in the message.`:'You do not have access to this ride.'):'This link is not valid. The ride may have been removed.';
+    safeSet(el,`<h2>${f.type==='approve'?'Approve ride':f.type==='assign'?'Assign vehicle':'Ride'}</h2><div class="empty">${msg}</div>${back}`);return;}
+  if(f.type==='approve'){safeSet(el,`<div class="panel-h"><div><h2>Approve long-distance ride</h2><p>For the immediate supervisor (IS)</p></div></div>${isCard(t)}${back}`);return;}
+  if(f.type==='assign'){
+    if(!S.isAdmin){safeSet(el,`<h2>Assign vehicle</h2><div class="empty">Only the transport admin can assign vehicles.</div>${back}`);return;}
+    safeSet(el,`<div class="panel-h"><div><h2>Assign vehicle</h2><p>Opened from WhatsApp. Check and approve.</p></div></div>${t.status==='requested'?reqCard(t):t.status==='is_pending'?`<div class="rule-note warn">The IS has not approved this yet.</div>${isCard(t)}`:rideCard(t)}<div class="btn-row"><a class="btn" href="#dispatch">Open Dispatch</a></div>`);return;}
+  safeSet(el,`<div class="panel-h"><div><h2>Ride</h2><p>${esc(t.passenger)}</p></div></div>${t.createdBy===S.uid?rideCard(t):S.isAdmin&&(t.status==='assigned'||t.status==='onboard')?moveCard(t):rideCard(t).replace(/<button[^>]*data-act="(cancel|start|end|issue)"[\s\S]*?<\/button>/g,'')}${back}`);
+}
+
+/* ---------- render ---------- */
+function safeSet(el,html){
+  const a=document.activeElement;
+  if(a&&el.contains(a)&&/^(SELECT|INPUT|TEXTAREA)$/.test(a.tagName)){el.dataset.stale='1';return;}
+  if(el.innerHTML!==html)el.innerHTML=html;el.dataset.stale='';
+}
+function allowedTabs(){
+  const t=['ride'];if(isQueue().length||S.tab==='approvals')t.push('approvals');
+  if(S.isAdmin)t.push('dispatch');if(canRecords())t.push('records');if(S.isAdmin)t.push('setup');return t;
+}
+function renderAll(){
+  const L=live(),p=L?profile():null;
+  $('#who').hidden=!L;if(L){$('#who-name').textContent=(p&&p.name)||S.email;const r=S.isAdmin?'Admin':isManager()?'Manager':'';$('#who-role').hidden=!r;$('#who-role').textContent=r;}
+  const net=$('#net');
+  net.className='net '+(S.mode==='demo'?'':S.online?'on':'off');net.textContent=S.mode==='demo'?'Demo · not saved':S.online?'Online':'Offline';
+  const pend=allTrips().filter(t=>t._pending).length,ban=$('#banner');
+  if(S.mode==='demo'){ban.hidden=false;ban.className='banner';ban.innerHTML=S.demoReason==='error'?'<b>Could not connect to the database.</b> Showing example data; nothing is saved.':'<b>Demo mode.</b> The database is not connected, so this shows example data and nothing is saved.';}
+  else if(L&&!S.online){ban.hidden=false;ban.className='banner off';ban.innerHTML=`<b>You are offline.</b> You can still book and enter speedometer readings. They are sent when the network is back${pend?` (${pend} waiting)`:''}.`;}
+  else if(S.dbErr){ban.hidden=false;ban.className='banner';ban.innerHTML='<b>The database refused access.</b> Publish the latest Firestore rules, then reload.';}
+  else ban.hidden=true;
+  const tabs=$('#tabs');
+  if(L){const allowed=allowedTabs(),req=allTrips().filter(t=>t.status==='requested').length,ap=isQueue().filter(t=>t.status==='is_pending').length;
+    const html=MAIN_TABS.filter(([k])=>allowed.includes(k)).map(([k,l])=>{const c=k==='dispatch'?req:k==='approvals'?ap:0;return `<button class="tab" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${c?` <span class="count">${c}</span>`:''}</button>`;}).join('');
+    if(tabs.innerHTML!==html)tabs.innerHTML=html;tabs.hidden=false;
+    const n=(S.isAdmin?req:0)+ap;document.title=(n?`(${n}) `:'')+'Dholera Site Transport';
+  }else tabs.hidden=true;
+  renderView();
+}
+const VIEWS=['loading','login','profile','ride','approvals','dispatch','records','setup','focus','gate'];
+function show(v){VIEWS.forEach(x=>{$('#v-'+x).hidden=x!==v;});}
+function renderView(){
+  if(S.mode==='loading'){show('loading');return;}
+  if(S.mode==='auth'){show('login');renderLogin();return;}
+  const t=S.tab;
+  if((t==='ride'&&(!profileOk()||S.editProfile))){show('profile');renderProfile();return;}
+  const gate=(t==='dispatch'||t==='setup')&&!S.isAdmin?'Only the transport admin can open this.':t==='records'&&!canRecords()?'Records are for the transport admin and managers.':null;
+  if(gate){show('gate');$('#gate-title').textContent='Not available';$('#gate-sub').textContent=gate;return;}
+  show(t);
+  ({ride:renderRide,approvals:renderApprovals,dispatch:renderDispatch,records:renderRecords,setup:renderSetup,focus:renderFocus})[t]();
+}
+function renderLogin(){
+  const L=S.login,code=L.step==='code';
+  $('#l-email-wrap').hidden=code;$('#l-code-wrap').hidden=!code;$('#l-code-actions').hidden=!code;
+  $('#login-title').textContent=code?'Enter the code':'Sign in';
+  $('#login-sub').innerHTML=code?`We sent a 6-digit code to <b>${esc(L.email)}</b>. Check Inbox and Junk. It works for 10 minutes.`:'For L&amp;T staff. Enter your <b>@lntecc.com</b> email and we send you a login code.';
+  $('#l-submit').textContent=L.busy?(code?'Checking…':'Sending…'):code?'Sign in':'Send code';
+  $('#l-submit-sub').textContent=code?'लॉग इन करें':'कोड भेजें';
+  $('#l-btn').disabled=L.busy;
+  const wait=Math.max(0,Math.ceil((L.until-Date.now())/1000));
+  $('#l-resend').disabled=L.busy||wait>0;$('#l-resend').textContent=wait>0?`Send a new code (${wait}s)`:'Send a new code';
+  if(wait>0){clearTimeout(renderLogin.t);renderLogin.t=setTimeout(()=>{if(S.mode==='auth')renderLogin();},1000);}
+}
+function renderProfile(){
+  const p=profile()||{},d=S.dirMe;
+  fillSelect($('#p-cadre'),[['','Choose cadre…'],...CADRES.map(c=>[c,c])]);fillSelect($('#p-dept'),[['','Choose department…'],...DEPTS.map(c=>[c,c])]);
+  const f=$('#profile-form');if(f.dataset.for!==S.email+(S.editProfile?'e':'')){f.dataset.for=S.email+(S.editProfile?'e':'');
+    $('#p-name').value=p.name||'';$('#p-ps').value=p.psNo||'';$('#p-phone').value=p.phone||'';$('#p-cadre').value=p.cadre||'';$('#p-dept').value=p.dept||'';}
+  ['#p-name','#p-ps'].forEach(s=>{$(s).readOnly=!!d;});$('#p-cadre').disabled=!!(d&&d.cadre);$('#p-dept').disabled=!!(d&&d.dept);
+  $('#p-sub').textContent=d?'Found you in the staff list. Check your mobile number and continue.':'Asked once. The driver and admin see these on your ride.';
+}
+function setTab(t,keepHash){
+  if(!['ride','approvals','dispatch','records','setup','focus'].includes(t))t='ride';
+  S.tab=t;S.confirm=null;
+  if(!keepHash&&t!=='focus'){try{history.replaceState(null,'',location.pathname+location.search+'#'+t);}catch(e){}}
+  ensureScope();renderAll();try{window.scrollTo({top:0});}catch(e){}
+}
+function readHash(){
+  const h=(location.hash||'').slice(1);
+  const m=h.match(/^(approve|assign|track)-(.+)$/);
+  if(m){S.focus={type:m[1],id:m[2]};setTab('focus',true);return;}
+  if(h.startsWith('from-')){const s=S.cfg.stops.find(x=>'from-'+slug(x)===h);setTab('ride',true);if(s){$('#b-from').value=s;syncBook();}return;}
+  if(['ride','approvals','dispatch','records','setup'].includes(h))setTab(h,true);
+}
+
+/* ---------- clicks ---------- */
+document.addEventListener('click',async e=>{
+  const tb=e.target.closest('[data-tab]');if(tb){S.focus=null;setTab(tb.dataset.tab);return;}
+  const rg=e.target.closest('[data-range]');if(rg){S.range=rg.dataset.range;renderRecords();loadHist();return;}
+  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  const a=b.dataset.act,id=b.dataset.id,now=Date.now();
+  const arm=k=>{if(S.confirm!==k){S.confirm=k;renderAll();return true;}S.confirm=null;return false;};
+  const card=b.closest('[data-card]');
+  const t=id?S.trips.get(id):null;
+  switch(a){
+    case 'signout':{if(!auth){toast('Demo mode: nothing to sign out.');return;}
+      try{await auth.signOut();}catch(er){console.error(er);}
+      S.lastBooked=null;S.notices=[];S.editProfile=false;S.focus=null;S.tab='ride';
+      try{history.replaceState(null,'',location.pathname+location.search);}catch(er){}
+      handleUser(null);toast('Signed out.');return;}
+    case 'resendcode':sendLoginCode(S.login.email);return;
+    case 'changeemail':S.login={step:'email',email:S.login.email,busy:false,until:0};$('#l-err').textContent='';$('#l-code').value='';renderLogin();setTimeout(()=>$('#l-email').focus(),0);return;
+    case 'editprofile':S.editProfile=true;renderAll();return;
+    case 'swap':{const f=$('#b-from'),to=$('#b-to');if(kind()!=='site'){toast('Swap works for rides within the site.');return;}const x=f.value;f.value=to.value;to.value=x;syncBook();return;}
+    case 'when':S.when=b.dataset.v;syncBook();return;
+    case 'pax':S.pax=Math.max(1,Math.min(12,S.pax+(+b.dataset.d)));syncBook();return;
+    case 'bookagain':S.lastBooked=null;renderAll();return;
+    case 'alerts':Alerts.enable();return;
+    case 'cancel':{if(!t||arm('cancel:'+id))return;const ops=[{c:'trips',id,upd:{status:'cancelled',cancelledAt:now}}];
+      if(t.status==='assigned'&&t.vehicleId)ops.push({c:'vehicles',id:t.vehicleId,upd:{status:'free',tripId:null,updatedAt:now}});
+      store.write(ops);if(S.lastBooked===id)S.lastBooked=null;toast('Ride cancelled.');return;}
+    case 'start':{if(!t)return;const inp=card&&card.querySelector('input');const o=intOf(inp&&inp.value);
+      if(!o){toast('Type the speedometer reading (km) first.');if(inp)inp.focus();return;}
+      if(t.lastOdo&&o<t.lastOdo&&arm('low:'+id)){toast(`This is lower than the last recorded reading (${t.lastOdo} km). Check it, then tap Start again.`);return;}
+      S.confirm=null;delete S.draft['odo-s-'+id];
+      const ops=[{c:'trips',id,upd:{status:'onboard',odoStart:o,startedAt:now}}];if(t.vehicleId)ops.push({c:'vehicles',id:t.vehicleId,upd:{status:'on_trip',updatedAt:now}});
+      store.write(ops);toast('Ride started. Enter the reading again at the drop.');return;}
+    case 'end':{if(!t)return;const inp=card&&card.querySelector('input');const o=intOf(inp&&inp.value);
+      if(!o){toast('Type the speedometer reading (km) at the drop.');if(inp)inp.focus();return;}
+      if(t.odoStart!=null&&o<=t.odoStart){toast(`The drop reading must be more than the start reading (${t.odoStart} km).`);return;}
+      const km=t.odoStart!=null?o-t.odoStart:null;if(km!=null&&km>2000){toast('That is more than 2000 km. Check the reading.');return;}
+      delete S.draft['odo-e-'+id];
+      const ops=[{c:'trips',id,upd:{status:'done',odoEnd:o,km,doneAt:now}}];
+      if(t.vehicleId)ops.push({c:'vehicles',id:t.vehicleId,upd:Object.assign({status:'free',tripId:null,lastOdo:o,updatedAt:now},S.cfg.stops.includes(t.to)?{at:t.to}:{})});
+      store.write(ops);toast(km!=null?`Ride completed: ${km} km.`:'Ride completed.');return;}
+    case 'issue':{if(arm('iss:'+id))return;store.write([{c:'trips',id,upd:{issue:true,issueAt:now}}]);toast('Problem reported to the transport admin.');return;}
+    case 'isok':{if(!t||t.status!=='is_pending')return;store.write([{c:'trips',id,upd:{status:'requested',isDecision:'approved',isDecidedAt:now,isBy:S.email}}]);toast('Approved. Tell the admin on WhatsApp so a vehicle is assigned quickly.');return;}
+    case 'isno':{if(!t||arm('isno:'+id))return;const note=(S.draft['isn-'+id]||'').trim();store.write([{c:'trips',id,upd:{status:'rejected',isDecision:'rejected',isDecidedAt:now,isBy:S.email,isNote:note}}]);toast('Marked as not approved.');return;}
+    case 'isoverride':{if(arm('iso:'+id))return;store.write([{c:'trips',id,upd:{status:'requested',isDecision:'approved',isDecidedAt:now,isBy:'Admin (IS approved on phone)'}}]);toast('Marked as IS approved. Assign a vehicle.');return;}
+    case 'assign':{if(!t||t.status!=='requested'){toast('This request was already handled.');return;}
+      const sel=card&&card.querySelector('select[data-as]'),vid=sel&&sel.value,v=vid&&S.vehicles.get(vid);
+      if(!v){toast('Choose a vehicle.');return;}
+      if((v.status||'free')!=='free'&&arm('as:'+id))return;S.confirm=null;
+      S.notices.unshift(id);S.notices=S.notices.slice(0,8);delete S.asSel[id];
+      store.write([{c:'trips',id,upd:{status:'assigned',vehicleId:v.id,plate:v.plate,vehType:v.type||'',seats:v.seats||'',driver:v.driver||'',driverPhone:v.driverPhone||'',lastOdo:v.lastOdo||null,assignedAt:now,assignedBy:S.email}},
+        {c:'vehicles',id:v.id,upd:{status:'assigned',tripId:id,updatedAt:now}}]);
+      toast(`${v.plate} assigned to ${t.passenger}.`);
+      if(S.tab==='focus')setTimeout(()=>{location.hash='#dispatch';},600);return;}
+    case 'reject':{if(arm('rej:'+id))return;store.write([{c:'trips',id,upd:{status:'rejected',rejectedAt:now,rejectedBy:S.email}}]);toast('Marked as not approved.');return;}
+    case 'unassign':{if(!t||arm('unas:'+id))return;const ops=[{c:'trips',id,upd:{status:'requested',vehicleId:null,plate:null,vehType:null,seats:null,driver:null,driverPhone:null,lastOdo:null,assignedAt:null}}];
+      if(t.vehicleId)ops.push({c:'vehicles',id:t.vehicleId,upd:{status:'free',tripId:null,updatedAt:now}});store.write(ops);toast('Back in the request list.');return;}
+    case 'closenotice':S.notices=S.notices.filter(x=>x!==id);renderAll();return;
+    case 'vfilter':S.vehF=b.dataset.v;renderFleet();return;
+    case 'vset':store.write([{c:'vehicles',id:b.dataset.vid,upd:{status:b.dataset.st,updatedAt:now}}]);return;
+    case 'vdel':{const vid=b.dataset.vid;if(arm('vdel:'+vid))return;store.write([{c:'vehicles',id:vid,del:true}]);toast('Vehicle removed.');return;}
+    case 'ddel':{if(arm('ddel:'+id))return;store.write([{c:'directory',id,del:true}]);toast('Removed from the staff list.');return;}
+    case 'addplace':{const k=b.dataset.k,inp=k==='stops'?$('#f-stop-new'):$('#f-out-new'),name=inp.value.trim();if(!name)return;
+      if(S.cfg[k].some(x=>x.toLowerCase()===name.toLowerCase())){toast('Already on the list.');return;}
+      const c=clone(S.cfg);c[k].push(name);inp.value='';store.write([{c:'config',id:'site',set:c,merge:true}]);return;}
+    case 'delplace':{const k=b.dataset.k;if(S.cfg[k].length<=2){toast('Keep at least two places.');return;}const c=clone(S.cfg);c[k]=c[k].filter(x=>x!==b.dataset.name);store.write([{c:'config',id:'site',set:c,merge:true}]);return;}
+    case 'excel':exportExcel();return;
+    case 'printqr':document.body.classList.add('printing-qr');try{window.print();}catch(er){}setTimeout(()=>document.body.classList.remove('printing-qr'),800);return;
+    case 'loadsample':{const d=sampleData(now);store.write([...d.vehicles.map(v=>{const x=Object.assign({},v,{status:v.status==='break'?'break':'free'});delete x.tripId;delete x.id;return {c:'vehicles',id:v.id,set:x};}),...d.staff.map(p=>({c:'directory',id:p.email,set:p}))]);toast('Sample vehicles and staff loaded. Remove them before going live.');return;}
+    case 'clearsample':{if(arm('clearsample'))return;const ops=[...[...S.vehicles.values()].filter(v=>v.sample).map(v=>({c:'vehicles',id:v.id,del:true})),...allTrips().filter(t=>t.sample).map(t=>({c:'trips',id:t.id,del:true})),...[...S.dir.values()].filter(p=>p.sample).map(p=>({c:'directory',id:p.id,del:true}))];store.write(ops);toast(`Removed ${ops.length} sample records.`);return;}
+  }
+});
+document.addEventListener('input',e=>{const k=e.target&&e.target.dataset&&e.target.dataset.draft;if(k)S.draft[k]=e.target.value;});
+document.addEventListener('change',e=>{const k=e.target&&e.target.dataset&&e.target.dataset.as;if(k){S.asSel[k]=e.target.value;S.confirm=null;}});
+document.addEventListener('focusout',e=>{setTimeout(()=>{const el=e.target.closest&&e.target.closest('[data-stale="1"]');if(el)renderAll();},0);});
+
+/* ---------- forms ---------- */
+const OTP_ERR={domain:'Use your L&T email ending in @lntecc.com.',wait:'Please wait a minute before asking for another code.',rate:'Too many codes for this email. Try again in an hour.',
+  busy:'Many people are signing in right now. Try again in a few minutes.',quota:"Today's login emails are used up. Try again tomorrow, or ask the transport admin.",
+  expired:'This code has expired. Tap "Send a new code".',attempts:'Too many wrong codes. Tap "Send a new code".',disabled:'This account is blocked. Contact the transport admin.',
+  server:'The login service had a problem. Try again in a minute.',setup:'Login codes are not set up yet. The admin must add OTP_URL in firebase-config.js.',network:'No internet. Sign-in needs the internet once.'};
+async function otpCall(body){
+  const url=window.OTP_URL;if(!url||/PASTE/i.test(url))throw {code:'setup'};
+  let r;try{r=await fetch(url,{method:'POST',body:JSON.stringify(body)});}catch(e){throw {code:'network'};}
+  let j;try{j=await r.json();}catch(e){throw {code:'server'};}
+  if(!j.ok)throw {code:j.error||'server',left:j.left,wait:j.wait};return j;
+}
+async function sendLoginCode(em){
+  const err=$('#l-err');err.textContent='';
+  if(!isLntEmail(em)){err.textContent=OTP_ERR.domain;$('#l-email').focus();return;}
+  if(!navigator.onLine){err.textContent=OTP_ERR.network;return;}
+  S.login.busy=true;renderLogin();
+  try{await otpCall({action:'send',email:em});S.login={step:'code',email:em,busy:false,until:Date.now()+60000};LS.set('lastEmail',em);
+    renderLogin();$('#l-code').value='';setTimeout(()=>$('#l-code').focus(),0);toast('Code sent to '+em);}
+  catch(ex){S.login.busy=false;if(ex.code==='wait'&&S.login.step==='email'){S.login={step:'code',email:em,busy:false,until:Date.now()+(ex.wait||60)*1000};}
+    renderLogin();err.textContent=ex.code==='wait'?`A code was sent a moment ago. Use that one, or wait ${ex.wait||60}s for a new one.`:(OTP_ERR[ex.code]||OTP_ERR.server);}
+}
+async function verifyLoginCode(){
+  const err=$('#l-err');err.textContent='';const code=digits($('#l-code').value);
+  if(code.length!==6){err.textContent='Type the 6-digit code from the email.';$('#l-code').focus();return;}
+  if(!auth){err.textContent='The database is not connected.';return;}
+  S.login.busy=true;renderLogin();
+  try{const j=await otpCall({action:'verify',email:S.login.email,code});await auth.signInWithCustomToken(j.token);S.login={step:'email',email:'',busy:false,until:0};$('#l-code').value='';}
+  catch(ex){S.login.busy=false;renderLogin();
+    err.textContent=ex.code==='wrong'?`Wrong code. ${ex.left} ${ex.left===1?'try':'tries'} left.`:(OTP_ERR[ex.code]||'Could not sign in. Try again.');
+    if(ex.code==='expired'||ex.code==='attempts')$('#l-code').value='';}
+}
+function initForms(){
+  initBook();
+  $('#login-form').addEventListener('submit',e=>{
+    e.preventDefault();if(S.login.busy)return;
+    if(S.login.step==='code')verifyLoginCode();else sendLoginCode($('#l-email').value.trim().toLowerCase());
+  });
+  $('#l-code').addEventListener('input',e=>{const v=digits(e.target.value).slice(0,6);if(e.target.value!==v)e.target.value=v;if(v.length===6&&!S.login.busy)verifyLoginCode();});
+  $('#l-email').value=LS.get('lastEmail','')||'';
+  $('#profile-form').addEventListener('submit',e=>{
+    e.preventDefault();const err=$('#p-err');err.textContent='';
+    const name=$('#p-name').value.trim().replace(/\s+/g,' '),phone=$('#p-phone').value.trim();
+    if(name.length<2){err.textContent='Enter your full name.';$('#p-name').focus();return;}
+    if(digits(phone).length<10){err.textContent='Enter your 10-digit mobile number so the driver can call you.';$('#p-phone').focus();return;}
+    const own=LS.get('profile:'+S.email,{})||{};
+    LS.set('profile:'+S.email,Object.assign(own,{name,psNo:$('#p-ps').value.trim(),phone,cadre:$('#p-cadre').value,dept:$('#p-dept').value}));
+    S.editProfile=false;renderAll();toast('Saved.');
+  });
+  $('#set-form').addEventListener('submit',e=>{
+    e.preventDefault();const c=clone(S.cfg);
+    c.adminPhone=$('#s-phone').value.trim();c.ratePerKm=Math.max(0,+$('#s-rate').value||0);
+    c.managers=$('#s-managers').value.split(/[,\n; ]+/).map(x=>x.trim().toLowerCase()).filter(isLntEmail);
+    store.write([{c:'config',id:'site',set:c,merge:true}]);toast('Settings saved.');
+  });
+  $('#veh-form').addEventListener('submit',e=>{
+    e.preventDefault();const err=$('#v-err');err.textContent='';
+    const plate=$('#v-plate').value.trim().toUpperCase().replace(/\s+/g,' '),id=vehId(plate);
+    if(id.length<4){err.textContent='Enter the full vehicle number, e.g. GJ 01 AB 1234.';return;}
+    const v={plate,type:$('#v-type').value.trim(),seats:Math.max(1,parseInt($('#v-seats').value,10)||4),driver:$('#v-driver').value.trim(),driverPhone:$('#v-dphone').value.trim(),at:$('#v-at').value};
+    if(!S.vehicles.has(id))v.status='free';
+    store.write([{c:'vehicles',id,set:v,merge:true}]);['#v-plate','#v-type','#v-driver','#v-dphone'].forEach(s=>$(s).value='');toast(plate+' saved.');
+  });
+  [['veh','#veh-file'],['dir','#dir-file']].forEach(([k,s])=>{const inp=$(s);inp.addEventListener('change',()=>{const f=inp.files&&inp.files[0];if(f)importFile(k,f).finally(()=>{inp.value='';});});});
+  document.querySelectorAll('[data-drop]').forEach(d=>{d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('drag');});d.addEventListener('dragleave',()=>d.classList.remove('drag'));
+    d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('drag');const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)importFile(d.dataset.drop,f);});});
+  $('#d-vq').addEventListener('input',e=>{S.vehQ=e.target.value;renderFleet();});
+  $('#f-dq').addEventListener('input',e=>{S.dirQ=e.target.value;renderSetup();});
+  $('#r-q').addEventListener('input',e=>{S.logQ=e.target.value;renderRecords();});
+}
+
+/* ---------- sign-in state ---------- */
+function handleUser(user){
+  if(!user){S.mode='auth';S.uid=null;S.email='';S.isAdmin=false;stopAll();renderAll();return;}
+  const em=String(user.email||'').toLowerCase();
+  if(!isLntEmail(em)){auth.signOut();S.mode='auth';renderAll();$('#l-err').textContent='Only @lntecc.com emails can use this website.';return;}
+  S.uid=user.uid;S.email=em;
+  if(!user.emailVerified){auth.signOut();S.mode='auth';renderAll();$('#l-err').textContent='Sign in with a code sent to your email.';return;}
+  S.mode='live';S.isAdmin=ADMIN_EMAILS.includes(em);
+  startLive();renderAll();readHash();
+}
+
+/* ---------- demo data (used only when the database is not connected) ---------- */
+function sampleData(now){
+  const M=MIN,stops=DEFAULT_CFG.stops;
+  const V=[["GJ 01 KT 4417","Innova Crysta",6,"Ramesh Parmar","9800000101"],["GJ 01 RM 2286","Dzire",4,"Sanjay Vaghela","9800000102"],["GJ 18 BX 9031","Ertiga",6,"Imran Shaikh","9800000103"],
+    ["GJ 01 HV 5520","Tempo Traveller",12,"Bharat Solanki","9800000104"],["GJ 27 TD 7704","Dzire",4,"Mahesh Rathod","9800000105"],["GJ 01 WP 3398","Innova Crysta",6,"Kiran Desai","9800000106"],
+    ["GJ 18 AZ 1162","Bolero",6,"Vikram Chauhan","9800000107"],["GJ 01 NN 8845","Dzire",4,"Rakesh Patel","9800000108"],["GJ 01 PQ 6612","Ertiga",6,"Nilesh Joshi","9800000109"],
+    ["GJ 18 CC 2045","Dzire",4,"Ashok Thakor","9800000110"],["GJ 01 LM 7781","Innova Crysta",6,"Pravin Makwana","9800000111"],["GJ 27 KS 3390","Bolero",6,"Dinesh Rabari","9800000112"]];
+  const vehicles=V.map(([plate,type,seats,driver,driverPhone],i)=>({id:vehId(plate),plate,type,seats,driver,driverPhone,at:stops[i%stops.length],status:i===10?'break':'free',lastOdo:31200+i*1730,sample:true}));
+  const P=[["Neha Joshi","neha.joshi","M1A","MEP"],["Arjun Rao","arjun.rao","GET","Civil"],["Priya Nair","priya.nair","O2","Planning"],["Vivek Sharma","vivek.sharma","S1","QA/QC"],["Deepa Iyer","deepa.iyer","M2B","Management"],["Rohit Verma","rohit.verma","DET","MEP"]];
+  const staff=P.map(([name,u,cadre,dept],i)=>({email:u+'@lntecc.com',psNo:String(40100+i*37),name,cadre,dept,mobile:'98765'+String(43200+i),isName:i===2?'Demo User':'R. K. Mehta',isEmail:i===2?'demo.user@lntecc.com':'rk.mehta@lntecc.com',isPhone:'9800000201',sample:true}));
+  const trips=[];let n=0;
+  const add=(pi,from,to,kind,extra)=>{n++;const p=staff[pi]||{name:'Demo User',email:'demo.user@lntecc.com',mobile:'9876500000',cadre:'M1B',dept:'Planning',psNo:'40999'};
+    trips.push(Object.assign({id:'sample'+String(n).padStart(2,'0'),passenger:p.name,psNo:p.psNo,email:p.email,phone:p.mobile,cadre:p.cadre,dept:p.dept,kind,from,to,when:null,pax:1,note:'',purpose:'',isName:'',isEmail:'',isPhone:'',prefVehicleId:'',prefPlate:'',status:'requested',createdAt:now-5*M,createdBy:'u'+pi,sample:true},extra));};
+  const asg=(vi,extra)=>Object.assign({vehicleId:vehicles[vi].id,plate:vehicles[vi].plate,vehType:vehicles[vi].type,seats:vehicles[vi].seats,driver:vehicles[vi].driver,driverPhone:vehicles[vi].driverPhone,lastOdo:vehicles[vi].lastOdo},extra);
+  add(0,"Gate No. 1","FAB Building","site",{createdAt:now-6*M,prefVehicleId:vehicles[1].id,prefPlate:vehicles[1].plate,note:'Client inspection at 11'});
+  add(3,"CUP Building","Project Office","site",{createdAt:now-2*M,pax:2});
+  const tm=new Date(now);tm.setDate(tm.getDate()+1);tm.setHours(6,30,0,0);
+  add(1,"Guest House 1","Ahmedabad Airport","outstation",{when:tm.getTime(),purpose:'Airport',note:'Flight 09:40',isName:'R. K. Mehta',isEmail:'rk.mehta@lntecc.com',isPhone:'9800000201',isDecision:'approved',isDecidedAt:now-20*M,isBy:'rk.mehta@lntecc.com',createdAt:now-40*M});
+  add(2,"Project Office","Vendor factory, Sanand","outstation",{status:'is_pending',when:tm.getTime()+2*3600e3,purpose:'Factory / vendor visit',note:'Chiller FAT',isName:'Demo User',isEmail:'demo.user@lntecc.com',isPhone:'9800000201',createdAt:now-12*M});
+  add(-1,"Project Office","Plot 4","site",asg(2,{status:'assigned',assignedAt:now-3*M,createdAt:now-9*M,createdBy:'demo'}));
+  add(5,"FAB Building","WWT Building","site",asg(3,{status:'onboard',assignedAt:now-25*M,startedAt:now-14*M,odoStart:vehicles[3].lastOdo,createdAt:now-30*M}));
+  vehicles[2].status='assigned';vehicles[2].tripId='sample05';vehicles[3].status='on_trip';vehicles[3].tripId='sample06';
+  [[0,"Project Office","FAB Building",0,6],[4,"FAB Building","Project Office",5,4],[1,"Gate No. 1","CUP Building",7,9],[3,"CUP Building","Guest House 2",0,12],[2,"Plot 4","Project Office",8,5]].forEach(([pi,f,to,vi,km],i)=>{
+    const c=now-(200-i*30)*M,s=vehicles[vi].lastOdo-40+i*10;add(pi,f,to,'site',asg(vi,{status:'done',createdAt:c,assignedAt:c+4*M,startedAt:c+10*M,doneAt:c+25*M,odoStart:s,odoEnd:s+km,km}));});
+  for(let d=1;d<=6;d++)[[0,1],[4,5],[7,8]].forEach(([vi,pi],j)=>{const c=dayStart(now-d*DAY)+(9+j*2)*3600e3,s=vehicles[vi].lastOdo-400+d*20+j;
+    add(pi,stops[j],stops[j+2],'site',asg(vi,{status:'done',createdAt:c,assignedAt:c+5*M,startedAt:c+12*M,doneAt:c+30*M,odoStart:s,odoEnd:s+7+j*3,km:7+j*3}));});
+  add(2,"Project Office","Gate No. 1","site",{status:'cancelled',createdAt:now-150*M,cancelledAt:now-148*M,createdBy:'demo'});
+  add(-1,"Gate No. 1","Project Office","site",asg(7,{status:'done',createdAt:now-26*3600e3,assignedAt:now-26*3600e3+4*M,startedAt:now-26*3600e3+9*M,doneAt:now-26*3600e3+22*M,odoStart:40011,odoEnd:40019,km:8,createdBy:'demo'}));
+  return {vehicles,staff,trips};
+}
+function startDemo(reason){
+  const d=sampleData(Date.now());
+  S.mode='demo';S.demoReason=reason||'setup';S.uid='demo';S.email='demo.user@lntecc.com';S.isAdmin=true;
+  S.vehicles=new Map(d.vehicles.map(v=>[v.id,v]));S.trips=new Map(d.trips.map(t=>[t.id,t]));S.dir=new Map(d.staff.map(p=>[p.email,Object.assign({},p,{id:p.email})]));
+  if(!LS.get('profile:'+S.email,null))LS.set('profile:'+S.email,{name:'Demo User',psNo:'40999',phone:'9876500000',cadre:'M1B',dept:'Planning',isName:'R. K. Mehta',isEmail:'rk.mehta@lntecc.com',isPhone:'9800000201'});
+  S.trips.forEach(t=>seen.add(t.id+':'+t.status));
+  renderAll();readHash();
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  initForms();
+  window.addEventListener('hashchange',readHash);
+  const net=()=>{S.online=navigator.onLine;renderAll();};window.addEventListener('online',net);window.addEventListener('offline',net);
+  const tick=()=>{$('#clock').textContent=fmtT(Date.now());};tick();
+  setInterval(()=>{tick();if(live()&&['ride','dispatch','approvals','focus'].includes(S.tab))renderAll();},30000);
+  if('serviceWorker' in navigator&&location.protocol==='https:'){try{navigator.serviceWorker.register('sw.js');}catch(e){}}
+  renderAll();
+  const cfg=window.FIREBASE_CONFIG;
+  if(!window.firebase||!cfg||!cfg.apiKey){startDemo('setup');return;}
+  try{
+    firebase.initializeApp(cfg);auth=firebase.auth();db=firebase.firestore();
+    try{db.settings({ignoreUndefinedProperties:true,merge:true});}catch(e){}
+    try{await db.enablePersistence({synchronizeTabs:true});}catch(e){console.warn('Offline storage not available',e&&e.code);}
+    auth.onAuthStateChanged(u=>handleUser(u));
+  }catch(e){console.error(e);db=null;auth=null;startDemo('error');}
+}
+boot();
+})();
+</script>
+</body>
+</html>
