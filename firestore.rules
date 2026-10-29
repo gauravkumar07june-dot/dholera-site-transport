@@ -1,0 +1,113 @@
+rules_version = '2';
+// Dholera Site Transport v7
+// Only signed-in, email-verified @lntecc.com accounts can use the data.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- who is asking ----------
+    function signedIn() { return request.auth != null; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function isLnt() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && myEmail().matches('^[^@]+@lntecc[.]com$');
+    }
+    // Transport admin(s). Keep this list the same as ADMIN_EMAILS in firebase-config.js (lowercase).
+    function isAdmin() { return isLnt() && myEmail() in ['gaurav.kumar21@lntecc.com']; }
+    function cfgPath() { return /databases/$(database)/documents/config/site; }
+    // Managers can read all rides (Records tab). The list is saved in Setup → Settings.
+    function isManager() {
+      return isLnt() && exists(cfgPath()) && myEmail() in get(cfgPath()).data.get('managers', []);
+    }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function dirPath() { return /databases/$(database)/documents/directory/$(myEmail()); }
+
+    // ---------- rides ----------
+    match /trips/{id} {
+      // Staff see their own rides; the IS sees rides waiting for their approval; admin and managers see all.
+      allow read: if isAdmin() || isManager()
+        || (isLnt() && (resource.data.createdBy == request.auth.uid || resource.data.isEmail == myEmail()));
+
+      // If the staff list has this person's IS email, the booking must use that IS (no self-approval).
+      function isFromDirectory(d) {
+        return !exists(dirPath())
+          || get(dirPath()).data.get('isEmail', '') == ''
+          || get(dirPath()).data.isEmail == d.isEmail;
+      }
+      function validNew(d) {
+        return d.keys().hasOnly(['passenger','psNo','email','phone','cadre','dept','kind','from','to','when','pax','note','purpose',
+                                 'isName','isEmail','isPhone','prefVehicleId','prefPlate','status','createdAt','createdBy'])
+          && d.createdBy == request.auth.uid
+          && d.email == myEmail()
+          && d.passenger is string && d.passenger.size() > 1 && d.passenger.size() < 80
+          && d.pax is int && d.pax >= 1 && d.pax <= 12
+          && d.from is string && d.to is string && d.from != d.to
+          && d.createdAt is int
+          && ((d.kind == 'site' && d.status == 'requested' && d.isEmail == '')
+              || (d.kind == 'outstation' && d.status == 'is_pending'
+                  && d.isEmail is string && d.isEmail.matches('^[^@]+@lntecc[.]com$')
+                  && d.isEmail != myEmail()
+                  && isFromDirectory(d)));
+      }
+      allow create: if isAdmin() || (isLnt() && validNew(request.resource.data));
+
+      allow update: if isAdmin()
+        // Staff cancel their own ride before it starts.
+        || (isLnt() && resource.data.createdBy == request.auth.uid
+            && resource.data.status in ['is_pending', 'requested', 'assigned']
+            && request.resource.data.status == 'cancelled'
+            && changed().hasOnly(['status', 'cancelledAt']))
+        // Only the named immediate supervisor (IS) approves or rejects a long-distance ride.
+        || (isLnt() && resource.data.status == 'is_pending'
+            && resource.data.isEmail == myEmail()
+            && request.resource.data.status in ['requested', 'rejected']
+            && changed().hasOnly(['status', 'isDecidedAt', 'isDecision', 'isBy', 'isNote']))
+        // Staff start the ride: speedometer reading at start (whole km).
+        || (isLnt() && resource.data.createdBy == request.auth.uid
+            && resource.data.status == 'assigned'
+            && request.resource.data.status == 'onboard'
+            && changed().hasOnly(['status', 'odoStart', 'startedAt'])
+            && request.resource.data.odoStart is int && request.resource.data.odoStart > 0)
+        // Staff end the ride: end reading must be higher, km must equal end minus start.
+        || (isLnt() && resource.data.createdBy == request.auth.uid
+            && resource.data.status == 'onboard'
+            && request.resource.data.status == 'done'
+            && changed().hasOnly(['status', 'odoEnd', 'km', 'doneAt'])
+            && request.resource.data.odoEnd is int
+            && request.resource.data.odoEnd > resource.data.odoStart
+            && request.resource.data.km == request.resource.data.odoEnd - resource.data.odoStart
+            && request.resource.data.km <= 2000)
+        // Staff report a problem after the ride. Readings stay locked.
+        || (isLnt() && resource.data.createdBy == request.auth.uid
+            && resource.data.status == 'done'
+            && changed().hasOnly(['issue', 'issueNote', 'issueAt']));
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- vehicles and drivers ----------
+    match /vehicles/{id} {
+      allow read: if isLnt();
+      allow create, delete: if isAdmin();
+      // The staff member on the ride may mark the vehicle on trip / free again (start, drop, cancel).
+      allow update: if isAdmin()
+        || (isLnt() && resource.data.get('tripId', null) is string
+            && get(/databases/$(database)/documents/trips/$(resource.data.tripId)).data.createdBy == request.auth.uid
+            && changed().hasOnly(['status', 'tripId', 'at', 'lastOdo', 'updatedAt'])
+            && request.resource.data.status in ['on_trip', 'free']);
+    }
+
+    // ---------- staff list (one document per @lntecc.com email) ----------
+    match /directory/{email} {
+      allow get: if isAdmin() || (isLnt() && email == myEmail());
+      allow list, write: if isAdmin();
+    }
+
+    // ---------- settings ----------
+    match /config/{id} {
+      allow read: if isLnt();
+      allow write: if isAdmin();
+    }
+  }
+}
