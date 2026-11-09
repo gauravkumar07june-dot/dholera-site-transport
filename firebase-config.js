@@ -13,4 +13,4 @@ window.FIREBASE_CONFIG = {
 window.ADMIN_EMAILS = ["gaurav.kumar21@lntecc.com", "mkcr@lntecc.com", "rakesh.kumar2-cnt@lntecc.com"];
 
 // Login codes by email: the Web app URL of login-code-script.gs (ends in /exec). See README → "Login codes by email".
-window.OTP_URL = "PASTE_APPS_SCRIPT_WEB_APP_URL_HERE";
+window.OTP_URL = "https://script.google.com/macros/s/AKfycbxBJT87Zr3u7ExMT6-J5AknujAiujsFyvENN0b535EgY3nyzODsubK9_EdRk8sm7kblOw/exec";
