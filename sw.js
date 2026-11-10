@@ -1,6 +1,6 @@
 // Dholera Site Transport v7: lets the website open and work with no internet.
 // Change VERSION whenever index.html changes, so phones pick up the new version.
-const VERSION = 'dst-v8.0';
+const VERSION = 'dst-v8.1';
 const SHELL = [
   './',
   'index.html',
