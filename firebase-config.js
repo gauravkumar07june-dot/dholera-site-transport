@@ -9,8 +9,7 @@ window.FIREBASE_CONFIG = {
 };
 
 // Transport admin email(s). Must match the list in firestore.rules (function isAdmin).
-// The admin signs in on the website like everyone else (create account + verify email).
-window.ADMIN_EMAILS = ["gaurav.kumar21@lntecc.com", "mkcr@lntecc.com", "rakesh.kumar2-cnt@lntecc.com"];
+window.ADMIN_EMAILS = ["gaurav.kumar21@lntecc.com", "mkcr@lntecc.com", "rakesh.kumar2-cnt@lntecc.com", "pritesh.mistri1-cnt@lntecc.com", "rajeev.singh2@lntecc.com"];
 
-// Login codes by email: the Web app URL of login-code-script.gs (ends in /exec). See README → "Login codes by email".
+// Login codes by email: the Web app URL of login-code-script.gs (ends in /exec).
 window.OTP_URL = "https://script.google.com/macros/s/AKfycbxBJT87Zr3u7ExMT6-J5AknujAiujsFyvENN0b535EgY3nyzODsubK9_EdRk8sm7kblOw/exec";
